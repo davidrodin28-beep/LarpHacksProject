@@ -41,3 +41,9 @@ Each module exposes a small interface; `src/app.js` is the composition layer tha
 Pose inference is requested every 33 ms on new video frames; hands run at most every 66 ms and face landmarks every 150 ms to prioritize quick arm movements. These are scheduling targets, not guaranteed frame rates. Fully occluded arms and movements between camera frames cannot be measured reliably.
 
 The hand overlay uses current detector landmarks without additional smoothing. Hand inference runs every 66 ms to preserve pose responsiveness. The Head slips counter has a dedicated card at the top of the sidebar.
+
+## Jab–cross combinations
+
+Choose Orthodox (left jab, right cross) or Southpaw (right jab, left cross). Start in guard with bent elbows. Each quick bend-to-extension transition labels that arm as a jab or cross; a jab followed by a cross 80–1200 ms later adds one combination. Punch detection rearms below 135 degrees and accepts extension within 700 ms of the last bent observation. Both arms extending in the same observed frame are not assigned an order. Holding an arm extended adds no repeats. Stance changes, pause, and camera restarts clear pending sequences; Reset data clears totals. These counts describe arm-extension sequences and do not measure punch technique, impact, or force.
+
+The Head slips card automatically increments on each detected sideways excursion and flashes with a +1 confirmation. Returning to center rearms the same side; crossing to the opposite side counts again. `src/combo-counter.js` owns stance-aware sequence timing.

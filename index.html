@@ -29,8 +29,16 @@
         <section class="panel side-card slip-card" aria-label="Automatic head slip counter">
           <div class="side-title">Head slips <small>AUTOMATIC</small></div>
           <div class="metric-value lime slip-total" id="slipsCount" aria-live="polite">0</div>
-          <p class="helper" id="slipStatus" role="status">Start the camera and complete hand setup.</p>
+          <div class="helper" id="slipFeedback" aria-live="polite"></div><p class="helper" id="slipStatus" role="status">Start the camera and complete hand setup.</p>
           <p class="helper">Face forward and hold centered briefly. Move your head sideways relative to your shoulders. Each left or right slip adds one.</p>
+        </section>
+        <section class="panel side-card">
+          <div class="side-title">Jab–cross combinations</div>
+          <label class="source" for="stance">Stance <select id="stance"><option value="Left">Orthodox · left jab</option><option value="Right">Southpaw · right jab</option></select></label>
+          <div class="metric-value lime" id="combosCount" aria-live="polite">0</div>
+          <div class="helper">Jabs: <b id="jabsCount">0</b> · Crosses: <b id="crossesCount">0</b></div>
+          <p class="helper" id="comboStatus" role="status">Ready for jab → cross</p>
+          <p class="helper">Start with bent arms in guard. Extend your lead arm, then your rear arm within 1.2 seconds. Each detected sequence adds one combination. This recognizes arm-extension sequences, not punch technique or impact.</p>
         </section>
         <section class="panel side-card"><div class="side-title">Live metrics <small>REAL TIME</small></div><div class="metric-grid"><div class="metric"><div class="metric-label">Motion level</div><div class="metric-value lime" id="motionValue">0.0<small>%</small></div></div><div class="metric"><div class="metric-label">Activity</div><div class="metric-value" id="activityValue" style="font-size:19px">Idle</div></div><div class="metric"><div class="metric-label">Session time</div><div class="metric-value" id="durationValue">00:00<small>min</small></div></div><div class="metric"><div class="metric-label">Peak motion</div><div class="metric-value" id="peakValue">0.0<small>%</small></div></div></div></section>
         <section class="panel side-card graph-card"><div class="side-title graph-head"><span>Activity history</span><small>LAST 45 S</small></div><div class="graph" id="graph" aria-label="Recent motion levels"></div><div class="graph-axis"><span>45s ago</span><span>now</span></div></section>

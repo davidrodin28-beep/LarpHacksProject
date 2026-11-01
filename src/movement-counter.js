@@ -1,3 +1,4 @@
+import { ComboCounter } from './combo-counter.js';
 import { SlipCounter } from './slip-counter.js';
 export function jointAngle(a, b, c, aspect = 1) {
   const u = [(a.x-b.x)*aspect, a.y-b.y];
@@ -30,12 +31,15 @@ const distance = (a,b,aspect) => Math.hypot((a.x-b.x)*aspect,a.y-b.y);
 export class MovementCounter {
   constructor() { this.reset(); }
   reset() {
-    this.counts = { arms: 0, opens: 0, closes: 0, tilts: 0, slips: 0 };
+    this.counts = { arms: 0, opens: 0, closes: 0, tilts: 0, slips: 0, jabs: 0, crosses: 0, combos: 0 };
+    this.combo = new ComboCounter(this.combo?.lead || 'Left');
     this.slip = new SlipCounter();
     this.resetGesture();
   }
   resetGesture() {
     this.slip?.resetGesture();
+    this.combo?.resetSequence();
+    this.punchBentAt = new Map();
     this.states = new Map();
     this.angles = {};
     this.reaches = {};
@@ -62,6 +66,7 @@ export class MovementCounter {
     const pose = poseResult?.landmarks?.[0] || [];
     this.angles = {};
     this.reaches = {};
+    const punches = [];
     const world = poseResult?.worldLandmarks?.[0] || [];
     for (const [side,s,e,w] of [['Left',11,13,15],['Right',12,14,16]]) {
       const key = 'arm'+side;
@@ -70,26 +75,35 @@ export class MovementCounter {
       const confidence = Math.min(...joints.map(p=>p?.visibility ?? (p ? 1 : 0)));
       if (confidence < (hasWorld ? 0.35 : 0.65) || !joints.every(p=>p && Number.isFinite(p.x) && Number.isFinite(p.y))) {
         const prior = this.states.get(key);
-        if (prior && now-prior.seen > 250) this.states.delete(key);
+        if (prior && now-prior.seen > 250) { this.states.delete(key); this.states.delete('punch'+side); this.punchBentAt.delete(side); }
         continue;
       }
       // Fall back to aspect-corrected image geometry only when world data is absent.
       const geometry = hasWorld
         ? armGeometry(world[s],world[e],world[w])
         : armGeometry(...joints.map(p=>({x:p.x*aspect,y:p.y,z:0})));
-      if (!geometry) { this.states.delete(key); continue; }
+      if (!geometry) { this.states.delete(key); this.states.delete('punch'+side); this.punchBentAt.delete(side); continue; }
       const mode = hasWorld ? '3D' : '2D';
       const previous = this.states.get(key);
-      if (previous && previous.mode !== mode) this.states.delete(key);
+      if (previous && previous.mode !== mode) { this.states.delete(key); this.states.delete('punch'+side); this.punchBentAt.delete(side); }
       const { angle, reach, state } = geometry;
       this.angles[side] = Math.round(angle);
       this.reaches[side] = { percent: Math.round(reach*100), mode };
       this.transition(key,state,now,(before,after)=>{
         if (before === 'bent' && after === 'straight') this.counts.arms++;
       }, hasWorld && confidence >= 0.65 ? 1 : 2);
+      const punchState = angle <= 135 && reach < 0.93 ? 'bent' : state === 'straight' ? 'straight' : null;
+      if (punchState === 'bent') this.punchBentAt.set(side, now);
+      this.transition('punch'+side, punchState, now, (before,after)=>{
+        if (before === 'bent' && after === 'straight' && now-(this.punchBentAt.get(side) ?? -Infinity) <= 700) punches.push(side);
+      }, hasWorld && confidence >= 0.65 ? 1 : 2);
       const current = this.states.get(key);
       if (current) current.mode = mode;
     }
+    this.combo.observe(punches, now);
+    this.counts.jabs = this.combo.jabs;
+    this.counts.crosses = this.combo.crosses;
+    this.counts.combos = this.combo.combos;
     for (const hand of hands) {
       const p = hand.landmarks;
       if (!hand.side || !p || p.length < 21) continue;

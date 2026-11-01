@@ -34,6 +34,12 @@ const ui = {
   closes: $('closesCount'),
   tilts: $('tiltsCount'),
   slips: $('slipsCount'),
+  jabs: $('jabsCount'),
+  crosses: $('crossesCount'),
+  combos: $('combosCount'),
+  stance: $('stance'),
+  comboStatus: $('comboStatus'),
+  slipFeedback: $('slipFeedback'),
   slipStatus: $('slipStatus'),
   movementStatus: $('movementStatus'),
   toast: $('toast'),
@@ -136,8 +142,15 @@ function loop() {
           updateCalibrationStatus();
         } else {
           const selectedHands = handOverlays.filter(hand=>!hand.preview);
+          const previousSlips = Number(ui.slips.textContent);
           const counts = movementCounter.sample(results.pose, selectedHands, now, ui.video.videoWidth / ui.video.videoHeight);
           for (const key of Object.keys(counts)) ui[key].textContent = counts[key];
+          if (counts.slips > previousSlips) {
+            ui.slipFeedback.textContent = `+${counts.slips-previousSlips} slip`;
+            ui.slips.getAnimations().forEach(animation=>animation.cancel());
+            ui.slips.animate([{transform:'scale(1.2)',color:'#fff'},{transform:'scale(1)',color:'#c4f06a'}],{duration:400});
+          }
+          ui.comboStatus.textContent = movementCounter.combo.status;
           ui.movementStatus.textContent = movementCounter.status;
           ui.slipStatus.textContent = movementCounter.slip.status;
         }
@@ -264,9 +277,11 @@ function saveSnapshot() {
 function resetMetrics() {
   motion.reset();
   movementCounter.reset();
-  for (const key of ['arms','opens','closes','tilts','slips']) ui[key].textContent = '0';
+  for (const key of ['arms','opens','closes','tilts','slips','jabs','crosses','combos']) ui[key].textContent = '0';
   updateMetrics({ level: 0, peak: 0, history: Array(45).fill(0) });
   if (running) sessionStartedAt = Date.now();
+  ui.slipFeedback.textContent = '';
+  ui.comboStatus.textContent = movementCounter.combo.status;
   showToast('Session metrics reset');
 }
 
@@ -317,4 +332,10 @@ $('mirrorBtn').addEventListener('click', () => {
 });
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) motion.resetPreviousFrame?.();
+});
+
+ui.stance.addEventListener('change', () => {
+  movementCounter.combo.setLead(ui.stance.value);
+  movementCounter.resetGesture();
+  ui.comboStatus.textContent = movementCounter.combo.status;
 });
