@@ -7,9 +7,14 @@ import { lessons } from './coaching/lessons.js';
 import { SportInventor, LiveRound, fetchTriggers } from './sport-inventor.js';
 const html = htm.bind(React.createElement);
 const sports = { Basketball: 'Show us your best free throw.', Boxing: 'Give us your best shadowboxing impression.', Tennis: 'An imaginary racket. A championship serve.', Archery: 'Draw your imaginary bow. Find your target.', 'Table tennis': 'Make that imaginary rally look dramatic.', Volleyball: 'Set up the imaginary winning point.' };
-function Pose() { return html`<svg viewBox="0 0 300 300" role="img" aria-label="Illustration of a basketball pose"><circle className="ball" cx="222" cy="51" r="19"/><path className="ball-lines" d="M204 45q18 4 27 22m-26-29q-4 22 18 30M204 52h36"/><g className="bones"><circle cx="138" cy="88" r="20"/><path d="m137 110-3 17m-29 6 58-10m-58 10-35-37 23-31m70 58 34-29 13-25m-102 65 5 62 39-2 7-68m-46 70-26 35-15 36m80-73 28 26 23 29m-99-55 39-2"/></g><g className="joints">${[[105,133],[163,123],[70,96],[93,65],[197,94],[210,69],[113,196],[152,194],[87,231],[180,220],[72,267],[203,249]].map(([x,y])=>html`<circle key=${x} cx=${x} cy=${y} r="4"/>`)}</g></svg>`; }
+function Pose() { return html`<svg viewBox="0 0 300 300" role="img" aria-label="Upper-body boxing stance with shoulder, elbow, and wrist tracking points">
+  <g className="bones"><circle cx="150" cy="78" r="24"/><path d="M150 103v24m-44 12 44-12 44 12m-88 0-24 50 30-76m82 26 25 47-24-76m-89 29 10 95h68l10-95m-78 95h68"/></g>
+  <g fill="#c2ec75" stroke="#253923" stroke-width="2"><path d="M99 109c-8-4-8-16-4-24 3-5 8-7 12-5l13 7c5 3 5 10 2 17l-5 12Z"/><path d="M185 114c-7-7-9-16-5-23l9-12c4-4 10-3 15 2 6 6 9 15 3 23l-9 13Z"/></g>
+  <g className="joints">${[[106,139],[194,139],[82,189],[219,186],[112,113],[195,110]].map(([x,y])=>html`<circle key=${x} cx=${x} cy=${y} r="4"/>`)}</g>
+  <text x="150" y="270" text-anchor="middle" fill="#72825f" font-size="10" font-family="Arial" letter-spacing="2">HANDS UP. YOU’VE GOT THIS.</text>
+</svg>`; }
 function Studio() {
-  const [sport, setSport] = useState('Basketball');
+  const [sport, setSport] = useState('Boxing');
   const [lessonIndex, setLessonIndex] = useState(0);
   const [stance, setStance] = useState('Orthodox');
   const [tracking, setTracking] = useState({ phase: 'off' });
@@ -97,6 +102,13 @@ function Studio() {
           <button className=${inventing ? 'active' : ''} aria-pressed=${inventing} onClick=${() => setInventing(v => !v)}>✦ <span>Invent a sport</span></button>
         </div>
       </div>
+      <div className="trainer-guide"><span><b>1</b> Frame your upper body</span><span><b>2</b> Show both hands</span><span><b>3</b> Punch, then return to guard</span></div>
+      <div className="trainer-stats" aria-label="Session counts">
+        <div><span>Arm extensions</span><strong>${tracking.metrics?.counts?.arms ?? 0}</strong><small>One count per extension</small></div>
+        <div><span>Lead jabs</span><strong>${tracking.metrics?.counts?.jabs ?? 0}</strong><small>Left lead stance</small></div>
+        <div><span>Rear crosses</span><strong>${tracking.metrics?.counts?.crosses ?? 0}</strong><small>Right rear hand</small></div>
+        <div><span>1–2 combinations</span><strong>${tracking.metrics?.counts?.combos ?? 0}</strong><small>Jab followed by cross</small></div>
+      </div>
       <div className="camera-slot">
       <div className="camera" ref=${stage}>
         <video ref=${video} autoPlay playsInline muted className="tracking-source" aria-hidden="true" tabIndex=${-1}></video>
@@ -107,7 +119,7 @@ function Studio() {
             <span className="camera-icon" aria-hidden="true">◎</span>
             <h2>Your stage is ready.</h2>
             <p>Step into frame when you’re ready.<br/>Your camera only turns on when you choose.</p>
-            <button className="primary" onClick=${enable}>Enable camera <span aria-hidden="true">↗</span></button>
+            <button className="primary" onClick=${enable}>Start camera <span aria-hidden="true">↗</span></button>
           </div>
         `}
         ${loading && html`
@@ -147,6 +159,10 @@ function Studio() {
           </${React.Fragment}>
         `}
       </div>
+      </div>
+      <div className="trainer-actions">
+        <p role="status">${loading ? 'Getting the camera ready…' : tracking.phase === 'setup' ? 'Show each hand to finish setup.' : tracking.paused ? 'Paused. Resume whenever you’re ready.' : active ? 'Tracking live. Extend, then return to guard.' : 'Start your camera when you’re ready.'}</p>
+        ${active && html`<div><button disabled=${!tracking.canPause} onClick=${()=>tracker.current.pause()}>${tracking.paused ? 'Resume training' : 'Pause training'}</button><button onClick=${stop}>Stop camera</button></div>`}
       </div>
       <div className="studio-bottom">
         <div className="session-summary">
@@ -228,5 +244,5 @@ function AccountControls() {
     ${error && html`<span role="alert" className="account-error">${error}</span>`}
   </div>`;
 }
-function App() { const [screen,setScreen]=useState('intro');return html`<main className="shell"><header><a className="brand" href="#" onClick=${e=>{e.preventDefault();setScreen('intro');}}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M8 3H4v4m12-4h4v4M4 16v4h4m12-4v4h-4M8 9h1m6 0h1m-8 5q4 5 8 0"/></svg>stillwatch</a>${screen==='intro'?html`<span className="tagline">Play someone else.</span>`:html`<button className="back" onClick=${()=>setScreen('intro')}>← Back</button>`}<${AccountControls}/></header>${screen==='intro'?html`<section className="intro"><div className="intro-copy"><div className="kicker">Your next alter ego</div><h1>Play the <em>part.</em></h1><p>Pick a sport. Step into frame.<br/>See what you can pull off.</p><button className="primary start" onClick=${()=>setScreen('studio')}>Start <span aria-hidden="true">↗</span></button></div><div className="art"><${Pose}/><span>Same you. Different game.</span></div></section>`:html`<${Studio}/>`}<footer><span>♧ Video stays on your device.</span><span>Pick a sport. Play the part.</span></footer></main>`; }
+function App() { const [screen,setScreen]=useState('intro');return html`<main className="shell"><header><a className="brand" href="#" onClick=${e=>{e.preventDefault();setScreen('intro');}}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M8 3H4v4m12-4h4v4M4 16v4h4m12-4v4h-4M8 9h1m6 0h1m-8 5q4 5 8 0"/></svg>BoxingPal</a>${screen==='intro'?html`<span className="tagline">Play someone else.</span>`:html`<button className="back" onClick=${()=>setScreen('intro')}>← Back</button>`}<${AccountControls}/></header>${screen==='intro'?html`<section className="intro"><div className="intro-copy"><div className="kicker">Your next alter ego</div><h1>Play the <em>part.</em></h1><p>Pick a sport. Step into frame.<br/>See what you can pull off.</p><button className="primary start" onClick=${()=>setScreen('studio')}>Start <span aria-hidden="true">↗</span></button></div><div className="art"><${Pose}/><span>Same you. Different game.</span></div></section>`:html`<${Studio}/>`}<footer><span>♧ Video stays on your device.</span><span>Pick a sport. Play the part.</span></footer></main>`; }
 createRoot(document.getElementById('root')).render(html`<${App}/>`);
