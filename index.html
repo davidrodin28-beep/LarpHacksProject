@@ -6,9 +6,10 @@
     <meta name="theme-color" content="#f7f8f3">
     <title>Stillwatch — Play the part.</title>
     <link rel="stylesheet" href="/src/styles/app.css">
+    <link rel="stylesheet" href="/src/styles/account.css">
   </head>
   <body>
-    <div id="root">
+    <div id="root" data-account-name="{{ g.user.name }}" data-csrf-token="{{ session.csrf_token }}">
     </div>
     <script type="module" src="/src/StillwatchUI.js">
     </script>

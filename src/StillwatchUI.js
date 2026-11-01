@@ -144,5 +144,15 @@ function Studio() {
     </section>
   `;
 }
-function App() { const [screen,setScreen]=useState('intro');return html`<main className="shell"><header><a className="brand" href="#" onClick=${e=>{e.preventDefault();setScreen('intro');}}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M8 3H4v4m12-4h4v4M4 16v4h4m12-4v4h-4M8 9h1m6 0h1m-8 5q4 5 8 0"/></svg>stillwatch</a>${screen==='intro'?html`<span className="tagline">Play someone else.</span>`:html`<button className="back" onClick=${()=>setScreen('intro')}>← Back</button>`}</header>${screen==='intro'?html`<section className="intro"><div className="intro-copy"><div className="kicker">Your next alter ego</div><h1>Play the <em>part.</em></h1><p>Pick a sport. Step into frame.<br/>See what you can pull off.</p><button className="primary start" onClick=${()=>setScreen('studio')}>Start <span aria-hidden="true">↗</span></button></div><div className="art"><${Pose}/><span>Same you. Different game.</span></div></section>`:html`<${Studio}/>`}<footer><span>♧ Video stays on your device.</span><span>Pick a sport. Play the part.</span></footer></main>`; }
+function AccountControls() {
+  const account = document.getElementById('root').dataset;
+  return html`<div className="account-controls">
+    <span className="account-name" title=${account.accountName}>${account.accountName}</span>
+    <form method="post" action="/logout">
+      <input type="hidden" name="csrf_token" value=${account.csrfToken}/>
+      <button type="submit">Log out</button>
+    </form>
+  </div>`;
+}
+function App() { const [screen,setScreen]=useState('intro');return html`<main className="shell"><header><a className="brand" href="#" onClick=${e=>{e.preventDefault();setScreen('intro');}}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M8 3H4v4m12-4h4v4M4 16v4h4m12-4v4h-4M8 9h1m6 0h1m-8 5q4 5 8 0"/></svg>stillwatch</a>${screen==='intro'?html`<span className="tagline">Play someone else.</span>`:html`<button className="back" onClick=${()=>setScreen('intro')}>← Back</button>`}<${AccountControls}/></header>${screen==='intro'?html`<section className="intro"><div className="intro-copy"><div className="kicker">Your next alter ego</div><h1>Play the <em>part.</em></h1><p>Pick a sport. Step into frame.<br/>See what you can pull off.</p><button className="primary start" onClick=${()=>setScreen('studio')}>Start <span aria-hidden="true">↗</span></button></div><div className="art"><${Pose}/><span>Same you. Different game.</span></div></section>`:html`<${Studio}/>`}<footer><span>♧ Video stays on your device.</span><span>Pick a sport. Play the part.</span></footer></main>`; }
 createRoot(document.getElementById('root')).render(html`<${App}/>`);

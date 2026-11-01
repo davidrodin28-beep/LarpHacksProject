@@ -1,0 +1,6 @@
+/* Account controls only; the main UI keeps its shared styling. */
+.account-controls {display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.account-controls form {margin:0;}
+.account-name {max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--muted);}
+@media(max-width:1000px) {.account-name {display:none;}}
+@media(max-width:700px) {.account-controls button {padding:8px 12px;min-height:36px;font-size:13px;}}
