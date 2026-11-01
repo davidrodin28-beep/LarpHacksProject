@@ -42,7 +42,16 @@ POST /generate   Constraints {players, space, minutes, equipment[], intensity, a
                  -> {sport, critique, alternatives[]}
 POST /remix      {constraints, sport, instruction: "make it harder"} -> sport
 GET  /triggers   motion vocabulary the tracker must implement
+POST /speech     {text} -> audio/mpeg; requires Authorization: Bearer <Supabase access token>
 ```
 
 Add a trigger: extend `Trigger` in `models.py` and mention it in `DESIGN_RULES` rule 10.
 Improve quality: edit `GOLD` / `DESIGN_RULES` in `prompts.py` - that file matters more than any code.
+
+## Spoken instructions
+
+Set `ELEVENLABS_API_KEY` in this service's environment (or `sportgen/.env`), plus the frontend project's `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`. Optional `ELEVENLABS_VOICE_ID` and `ELEVENLABS_MODEL_ID` select the voice and model; defaults are `JBFqnCBsd6RMkjVDRZzb` and `eleven_flash_v2_5`. Set `SPORTGEN_CORS_ORIGINS` to include your frontend origin. Keep the ElevenLabs key on the backend.
+
+`POST /speech` verifies the session with Supabase, accepts 1–3000 characters, and returns ElevenLabs MP3 audio. It limits each user to 20 requests and 6000 characters per minute, runs at most two syntheses at a time, and keeps a bounded in-memory audio cache. Limits and cache are per service process; use shared storage before running multiple instances. The browser splits longer rules into sequential clips and cancels stale narration. Audio delivery and synthesis errors leave the written instructions intact.
+
+Run offline backend tests from this directory with `PYTHONPATH=src python -m pytest -q`. No live ElevenLabs calls or credits are needed for tests.

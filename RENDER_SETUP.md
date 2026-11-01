@@ -25,7 +25,21 @@ The Supabase values are intentionally public browser configuration. Also set `SP
 
 `render.yaml` describes this Python service. Committing it does not automatically convert an existing manually configured Static Site or reassign its Render URL. If the current service is a Static Site, migrate it to a Web Service through Render and confirm the target URL is assigned to that service. Preserve the existing site's configuration until the replacement works. A static-only deployment can display the website but cannot execute `/jobs`.
 
-## Supabase project
+## ElevenLabs spoken instructions
+
+Use the same **larphacksproject** Python Web Service for the website, voice, and sport generation. On that service, add:
+
+- `ELEVENLABS_API_KEY`: your private ElevenLabs API key with text-to-speech access.
+- `ELEVENLABS_VOICE_ID`: your voice ID, or `JBFqnCBsd6RMkjVDRZzb` for the default voice.
+- `ELEVENLABS_MODEL_ID`: `eleven_flash_v2_5` by default.
+- `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`: the same project values used by the frontend. These let the speech endpoint verify the caller's login.
+- `SPORTGEN_CORS_ORIGINS`: `https://larphacksproject.onrender.com,http://localhost:8000,http://127.0.0.1:8000` (adjust for your actual frontend URL).
+
+Rebuild and redeploy the combined Python service. Voice requests use `/speech` on the website’s own domain; no separate `SPORTGEN_API_URL` is needed. The ElevenLabs key belongs only in the server environment. Existing manually configured services need these environment changes applied in Render; editing the Blueprint alone does not update them.
+
+Log in, enter the studio, select **Enable voice**, then **Read instructions**. Start guided practice to hear checkpoint changes. Check mute, replay, pause, and lesson changes, and try **Read rules aloud** on an invented game. Missing keys, expired sessions, exhausted credits, or blocked playback show a message while text instructions remain usable. Live synthesis needs a configured ElevenLabs account and consumes credits.
+
+## Supabase project settings
 
 Project: **Stillwatch** (`rkzwufzosvuonroiwnwx`)
 

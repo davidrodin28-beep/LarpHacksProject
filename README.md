@@ -64,10 +64,16 @@ Run checks:
 
 ```sh
 python3 -m unittest discover -s tests -v
-node --experimental-vm-modules --test tests/auth-flow.test.mjs tests/coaching.test.mjs
+node --experimental-vm-modules --test tests/*.test.mjs
 ```
 
 ## Guided coaching
+
+Choose **Enable voice** in the coach controls for ElevenLabs spoken instructions. During guided practice, each checkpoint and drill completion is read aloud once. **Read instructions** replays the complete lesson; **Stop voice** interrupts playback and **Voice on · mute** disables automatic speech. Pausing, changing lessons, or turning off the camera cancels current narration. The AI game cards also have **Read rules aloud** buttons when voice is enabled. Text cues remain available if audio fails. Guest mode supports camera practice; log in for spoken instructions.
+
+Voice uses the existing `sportgen` Python service. Set `ELEVENLABS_API_KEY` on that backend, along with `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` for the same project as the frontend. Optional `ELEVENLABS_VOICE_ID` selects the voice (default `JBFqnCBsd6RMkjVDRZzb`); `ELEVENLABS_MODEL_ID` defaults to `eleven_flash_v2_5`. The website calls `/speech` on its own origin; no separate API URL is needed. See [RENDER_SETUP.md](RENDER_SETUP.md) for deployment details. Never place the ElevenLabs key in browser code or the static site's public config.
+
+Only instruction text is sent for speech synthesis; camera frames remain on your device. Voice requires a valid login, and synthesis uses your ElevenLabs credits. Repeated cues are cached in memory, with per-user request and character limits on the backend. The integration uses the [ElevenLabs text-to-speech API](https://elevenlabs.io/docs/api-reference/text-to-speech/convert).
 
 In the studio, choose a sport and a move. Each of the six sports has two beginner lessons with form cues, a practice drill, and a technique tip. Lessons can be read without camera access. Enable the camera, complete hand setup, and choose **Start guided practice** for live upper-body position prompts. Boxing includes Orthodox and Southpaw choices so jab and cross checkpoints use the appropriate arm.
 

@@ -24,7 +24,7 @@ export function scoreRound(sport, triggers, baseline, counts) {
   return { perMove, total: perMove.reduce((sum, m) => sum + m.total, 0) };
 }
 
-export function SportInventor({ onPlay, disabled }) {
+export function SportInventor({ onPlay, disabled, onRead }) {
   const [form, setForm] = useState({ players: 'solo', minutes: 2, intensity: 'medium', audience: 'adults', depth: 'simple', notes: '', engine: 'fast' });
   const [job, setJob] = useState(null);
   const [result, setResult] = useState(null);
@@ -97,11 +97,11 @@ export function SportInventor({ onPlay, disabled }) {
         ${busy && html`<span className="inventor-status" role="status"><i></i>${STAGES[job.stage] || job.stage} ${Math.round(job.elapsed_s || 0)}s</span>`}
       </div>
       ${error && html`<p className="message" role="alert">${error}</p>`}
-      ${sport && html`<${RuleCard} sport=${sport} judge=${judge} alternatives=${result.alternatives} onPlay=${() => onPlay(sport)} disabled=${disabled}/>`}
+      ${sport && html`<${RuleCard} sport=${sport} judge=${judge} alternatives=${result.alternatives} onPlay=${() => onPlay(sport)} onRead=${onRead ? () => onRead(sport) : undefined} disabled=${disabled}/>`}
     </section>`;
 }
 
-export function RuleCard({ sport, judge, alternatives, onPlay, disabled }) {
+export function RuleCard({ sport, judge, alternatives, onPlay, disabled, onRead }) {
   return html`
     <article className="rule-card">
       <header>
@@ -122,6 +122,7 @@ export function RuleCard({ sport, judge, alternatives, onPlay, disabled }) {
       <p><strong>Round.</strong> ${sport.round_seconds}s · ${sport.duration}</p>
       <p className="first30"><strong>First 30 seconds.</strong> ${sport.first_30_seconds}</p>
       <footer>
+        <button type="button" disabled=${!onRead} onClick=${onRead} title=${onRead ? 'Read these rules aloud' : 'Enable voice in the coach controls to hear the rules'}>Read rules aloud</button>
         <button className="primary" disabled=${disabled} onClick=${onPlay}>Play ${sport.name} <span aria-hidden="true">↗</span></button>
         ${judge && html`<span className="judge" title="AI playtest judge, out of 35">judge ${Object.values(judge.scores).reduce((a, b) => a + b, 0)}/35</span>`}
         ${alternatives?.length ? html`<span className="alts">also considered: ${alternatives.map(a => a.name).join(', ')}</span>` : null}
@@ -130,7 +131,7 @@ export function RuleCard({ sport, judge, alternatives, onPlay, disabled }) {
 }
 
 // Live round: call start() when the camera is tracking; feed the latest tracker counts via `counts`.
-export function LiveRound({ sport, triggers, counts, onExit }) {
+export function LiveRound({ sport, triggers, counts, onExit, onRead }) {
   const [round, setRound] = useState(null); // { baseline, startedAt, endsAt, final? }
   const [now, setNow] = useState(Date.now());
   const bestKey = `stillwatch.best.${sport.name}`;
@@ -174,6 +175,7 @@ export function LiveRound({ sport, triggers, counts, onExit }) {
       </div>
       <p className="live-hint">${!round ? sport.first_30_seconds : round.final ? (round.final.total >= best && round.final.total > 0 ? 'New best!' : `Best: ${best}`) : sport.twist}</p>
       <div className="live-actions">
+        <button type="button" disabled=${!onRead} onClick=${onRead}>Read rules aloud</button>
         ${!round || round.final
           ? html`<button className="primary" onClick=${start}>${round ? 'Play again' : `Start ${sport.round_seconds}s round`} <span aria-hidden="true">↗</span></button>`
           : html`<button onClick=${() => setRound(r => ({ ...r, endsAt: Date.now() }))}>End round</button>`}

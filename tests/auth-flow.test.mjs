@@ -12,6 +12,7 @@ async function page({ signup = false, mode = signup ? 'signup' : 'login', result
   let update;
   let signedOut = false;
   let cleaned = false;
+  const storage = new Map([['boxingpal-guest', '1']]);
   const button = { disabled: true, textContent: '' };
   const message = { hidden: true, setAttribute() {} };
   const values = new Map(Object.entries({ email: 'test@example.test', password: 'long test password', confirm_password: 'long test password', name: 'Test' }));
@@ -28,6 +29,7 @@ async function page({ signup = false, mode = signup ? 'signup' : 'login', result
     document: { body: { dataset: { authMode: mode } }, getElementById: id => id === 'auth-form' ? form : message },
     window: { location: { origin: 'https://stillwatch.example', hash, search, pathname: `/${mode}.html`, replace: url => { redirected = url; } } },
     history: { replaceState() { cleaned = true; } }, URLSearchParams,
+    sessionStorage: { removeItem: key => storage.delete(key) },
     FormData: class { get(key) { return values.get(key); } },
   });
   const dependency = new vm.SyntheticModule(['getClient'], function () {
@@ -36,7 +38,7 @@ async function page({ signup = false, mode = signup ? 'signup' : 'login', result
   const module = new vm.SourceTextModule(source, { context });
   await module.link(() => dependency);
   await module.evaluate();
-  return { button, message, values, redirect: () => redirected, call: () => call, resetRequest: () => resetRequest, update: () => update, signedOut: () => signedOut, cleaned: () => cleaned, submit: async () => {
+  return { button, message, values, storage, redirect: () => redirected, call: () => call, resetRequest: () => resetRequest, update: () => update, signedOut: () => signedOut, cleaned: () => cleaned, submit: async () => {
     let prevented = false;
     await submit({ preventDefault: () => { prevented = true; } });
     assert.equal(prevented, true);
@@ -48,6 +50,12 @@ test('login sends credentials to Supabase and redirects instead of POSTing', asy
   await p.submit();
   assert.equal(p.call().email, 'test@example.test');
   assert.equal(p.redirect(), '/');
+  assert.equal(p.storage.has('boxingpal-guest'), false);
+});
+test('an existing login exits guest mode before redirecting', async () => {
+  const p = await page({ session: {} });
+  assert.equal(p.redirect(), '/');
+  assert.equal(p.storage.has('boxingpal-guest'), false);
 });
 test('signup without session asks for email confirmation', async () => {
   const p = await page({ signup: true, result: { data: { session: null } } });
