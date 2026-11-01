@@ -7,7 +7,7 @@ from sportgen import prompts as P
 from sportgen.models import Constraints, Critique, CritiqueBatch, Scores, Sport
 
 
-def _sport(name, equipment, duration="Three 4-minute rounds"):
+def _sport(name, equipment, duration="Three 60-second rounds"):
     return P.GOLD[0].model_copy(update={"name": name, "equipment": equipment, "duration": duration})
 
 
@@ -24,11 +24,11 @@ def fake_llm(monkeypatch):
         user = messages[-1]["content"]
         if model_cls is Sport:
             if "CURRENT SPORT" in user:  # refine/remix: return a fixed, clean sport
-                return _sport("Refined", ["1 soft ball", "4 cones"])
+                return _sport("Refined", ["none"])
             twist = user.split("Twist category to use: ")[1].split(" ")[0]
-            return {"asymmetry": _sport("Clean A", ["1 soft ball"]),
-                    "rhythm": _sport("Dirty", ["1 soft ball", "1 phone playing a beat"]),
-                    "territory": _sport("Clean B", ["4 cones"])}[twist]
+            return {"asymmetry": _sport("Clean A", ["none"]),
+                    "rhythm": _sport("Dirty", ["1 phone playing a beat"]),
+                    "forbidden": _sport("Clean B", ["none"])}[twist]
         if model_cls is CritiqueBatch:  # 1-based indices on purpose, B scores higher
             mk = lambda i, nov: Critique(index=i, scores=Scores(clarity=4, simplicity=4, decisions=4, catch_up=4, novelty=nov, safety=5, fit=4),
                                          closest_existing_sport="x", similarity_pct=30, weaknesses=["tighten scoring"])
@@ -42,8 +42,8 @@ def fake_llm(monkeypatch):
 
 
 async def test_generate_filters_unfaithful_and_repairs_indices(fake_llm):
-    c = Constraints(players="3v3", equipment=["1 soft ball", "4 cones"], minutes=15)
-    res = await G.generate(c, twists=["asymmetry", "rhythm", "territory"])
+    c = Constraints(players="solo", equipment=["none"], minutes=3)
+    res = await G.generate(c, twists=["asymmetry", "rhythm", "forbidden"])
     assert res.sport.name == "Refined"
     assert [a.name for a in res.alternatives] == ["Clean A"]  # Dirty dropped by fit check, B won
     assert res.critique.index == 1 and res.critique.scores.novelty == 5
@@ -53,12 +53,12 @@ async def test_generate_filters_unfaithful_and_repairs_indices(fake_llm):
 
 async def test_generate_keeps_candidate_when_refine_regresses(fake_llm):
     fake_llm.verify_novelty = 1  # refined sport judged much worse (novelty 5 -> 1, plus the <=2 penalty)
-    c = Constraints(players="3v3", equipment=["1 soft ball", "4 cones"], minutes=15)
-    res = await G.generate(c, twists=["asymmetry", "rhythm", "territory"])
+    c = Constraints(players="solo", equipment=["none"], minutes=3)
+    res = await G.generate(c, twists=["asymmetry", "rhythm", "forbidden"])
     assert res.sport.name == "Clean B" and res.final_critique is res.critique
 
 
 async def test_generate_keeps_dirty_candidates_when_nothing_is_clean(fake_llm):
-    c = Constraints(players="3v3", equipment=["1 frisbee"], minutes=15)  # nothing matches -> all dirty
+    c = Constraints(players="solo", equipment=["none"], minutes=3)
     res = await G.generate(c, twists=["asymmetry", "rhythm"])
     assert res.sport.name == "Refined" and len(res.alternatives) == 1

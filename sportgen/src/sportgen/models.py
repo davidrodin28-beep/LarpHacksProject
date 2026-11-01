@@ -5,19 +5,23 @@ from typing import Literal, get_args
 
 from pydantic import BaseModel, Field, model_validator
 
-# The motion tracker's vocabulary. Generated sports may ONLY use these triggers, so every rule is
-# machine-checkable. Extend this enum when the tracker learns a new event.
-Trigger = Literal["jump", "squat", "arm_raise", "hold_pose", "step_zone", "touch_ground", "spin", "clap"]
+# The webcam tracker's vocabulary (Stillwatch MovementCounter). Generated sports may ONLY use these triggers,
+# so every rule is live-countable: the frontend maps each trigger to a counter and scores in real time.
+Trigger = Literal["arm_extend", "punch", "hand_open", "hand_close", "head_tilt", "slip"]
+TRIGGER_COUNTERS: dict[str, tuple[str, ...]] = {  # trigger -> MovementCounter.counts keys that increment it
+    "arm_extend": ("arms",), "punch": ("jabs", "crosses"), "hand_open": ("opens",),
+    "hand_close": ("closes",), "head_tilt": ("tilts",), "slip": ("slips",),
+}
 
-Twist = Literal["asymmetry", "hidden_info", "role_swap", "territory", "rhythm", "cooperation", "momentum"]
-TWISTS: tuple[Twist, ...] = ("asymmetry", "hidden_info", "role_swap", "territory", "rhythm", "cooperation", "momentum")
+Twist = Literal["asymmetry", "hidden_info", "role_swap", "forbidden", "rhythm", "sequence", "momentum"]
+TWISTS: tuple[Twist, ...] = ("asymmetry", "hidden_info", "role_swap", "forbidden", "rhythm", "sequence", "momentum")
 
 
 class Constraints(BaseModel):
-    players: str = "4-6"
-    space: str = "gym"
-    minutes: int = 15
-    equipment: list[str] = Field(default_factory=lambda: ["1 soft ball"])
+    players: str = "solo"  # "solo", "1v1 taking turns", "2-4 taking turns"
+    space: str = "standing in front of a webcam, upper body in frame"
+    minutes: int = 2
+    equipment: list[str] = Field(default_factory=lambda: ["none"])
     intensity: Literal["low", "medium", "high"] = "medium"
     audience: str = "adults"
     depth: Literal["simple", "normal", "deep"] = "simple"
@@ -38,6 +42,7 @@ class Move(BaseModel):
     name: str
     trigger: Trigger
     rule: str = Field(description="When this move counts, in one sentence a referee could apply.")
+    points: int = Field(default=1, ge=-5, le=5, description="Points per detected move. Negative = penalised move.")
 
 
 class Sport(BaseModel):
@@ -49,10 +54,11 @@ class Sport(BaseModel):
     field: str = Field(description="Layout in plain words: zones, lines, cones.")
     moves: list[Move] = Field(min_length=2, max_length=4)
     scoring: str = Field(description="One plain sentence. At most one bonus condition.")
-    fouls: list[str] = Field(min_length=1, max_length=4)
+    fouls: list[str] = Field(default_factory=list, max_length=4)
     twist: str = Field(description="THE one rule nobody has seen before.")
     catch_up: str = Field(description="What the trailing side gets so it never feels decided early.")
     duration: str
+    round_seconds: int = Field(default=60, ge=15, le=300, description="Length of one scored round the app times.")
     first_30_seconds: str = Field(description="What a brand-new player does the moment play starts.")
     twist_category: Twist | None = None
 
@@ -75,6 +81,9 @@ class Sport(BaseModel):
                 data["tagline"] = data["tagline"][:90]
             if isinstance(data.get("scoring"), list):
                 data["scoring"] = " ".join(str(x) for x in data["scoring"])
+            rs = data.get("round_seconds")
+            if isinstance(rs, (int, float)):
+                data["round_seconds"] = int(min(300, max(15, rs)))
         return data
 
 
@@ -92,14 +101,14 @@ def _nouns(items: list[str]) -> set[str]:
 
 def fit_violations(sport: Sport, c: Constraints) -> list[str]:
     """Deterministic faithfulness check, zero LLM cost. Catches the most common error: invented equipment."""
-    allowed = _nouns(c.equipment) | {"cone", "line", "tape", "wall", "marker", "zone", "chalk"}  # free field markings
+    allowed = _nouns(c.equipment) | {"webcam", "camera", "screen", "laptop", "frame", "chair", "wall", "line", "tape"}  # the setup itself
     no_gear = not c.equipment or all(e.strip().lower() in ("", "none") for e in c.equipment)
     bad = [e for e in sport.equipment if e.strip().lower() != "none" and not (_nouns([e]) & allowed)]
     if no_gear:
-        bad = [e for e in sport.equipment if e.strip().lower() != "none" and not (_nouns([e]) & {"cone", "line", "tape", "marker", "chalk"})]
+        bad = [e for e in sport.equipment if e.strip().lower() != "none" and not (_nouns([e]) & {"webcam", "camera", "screen", "laptop"})]
     out = [f"Remove equipment not provided: {', '.join(bad)}. Allowed: {', '.join(c.equipment) or 'none'}."] if bad else []
     # Gear smuggled in through the rules rather than the equipment list ("on each beat", "when the timer buzzes").
-    smuggled = sorted({w for w in re.findall(r"\b(music|beat|song|speaker|phone|timer|metronome|whistle|bell|blindfold)s?\b",
+    smuggled = sorted({w for w in re.findall(r"\b(music|beat|song|speaker|phone|metronome|whistle|bell|blindfold|ball|cone|rope|weight|dumbbell)s?\b",
                                              sport.rule_text().lower())} - allowed)
     if smuggled:
         out.append(f"Rules rely on {', '.join(smuggled)}, which is not in the equipment list. Use only: "
@@ -115,14 +124,12 @@ def fit_violations(sport: Sport, c: Constraints) -> list[str]:
 # Words a rule must contain to plausibly describe its trigger. A move named "Carry" with trigger touch_ground
 # whose rule never mentions the ground will fire the wrong tracker event.
 TRIGGER_WORDS: dict[str, tuple[str, ...]] = {
-    "jump": ("jump", "hop", "leap", "feet leave"),
-    "squat": ("squat", "crouch", "duck", "bend your knees", "bend knees"),
-    "arm_raise": ("arm", "arms", "hand up", "hands up", "overhead", "above your head", "above the head", "reach up"),
-    "hold_pose": ("hold", "freeze", "still", "pose", "statue"),
-    "step_zone": ("step", "enter", "stand in", "into the", "cross", "inside"),
-    "touch_ground": ("ground", "floor", "touch down", "palm down"),
-    "spin": ("spin", "turn around", "360", "rotate", "twirl"),
-    "clap": ("clap",),
+    "arm_extend": ("extend", "straighten", "reach", "stretch", "arm out", "arms out", "full extension"),
+    "punch": ("punch", "jab", "cross", "strike", "throw a", "hook"),
+    "hand_open": ("open", "spread", "palm", "fingers out", "release"),
+    "hand_close": ("close", "fist", "grip", "clench", "grab", "squeeze"),
+    "head_tilt": ("tilt", "lean your head", "head to", "ear to", "head lean", "cock your head"),
+    "slip": ("slip", "duck", "dodge", "sway", "bob", "weave", "dip"),
 }
 
 
