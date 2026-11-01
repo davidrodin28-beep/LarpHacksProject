@@ -1,5 +1,6 @@
 """Stillwatch accounts and local SQLite storage."""
 import hashlib
+import hmac
 import os
 from pathlib import Path
 import re
@@ -9,6 +10,8 @@ import time
 from datetime import timedelta
 
 from flask import Flask, abort, g, redirect, render_template, request, send_from_directory, session, url_for
+from authlib.integrations.flask_client import OAuth
+from twilio.rest import Client as TwilioClient
 from werkzeug.security import check_password_hash, generate_password_hash
 
 ROOT = Path(__file__).resolve().parent
@@ -74,11 +77,115 @@ def create_app(test_config=None):
                 attempted_at INTEGER NOT NULL
             );
             CREATE INDEX IF NOT EXISTS attempts_email_time ON auth_attempts(email, attempted_at);
+            CREATE TABLE IF NOT EXISTS social_identities (
+                provider TEXT NOT NULL,
+                subject TEXT NOT NULL,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                PRIMARY KEY (provider, subject)
+            );
+            CREATE TABLE IF NOT EXISTS phone_auth_attempts (
+                phone_hash TEXT NOT NULL,
+                action TEXT NOT NULL,
+                attempted_at INTEGER NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS phone_attempts_time ON phone_auth_attempts(phone_hash, action, attempted_at);
         ''')
+        columns = {row['name'] for row in db().execute('PRAGMA table_info(users)').fetchall()}
+        if 'phone_hash' not in columns:
+            db().execute('ALTER TABLE users ADD COLUMN phone_hash TEXT')
+        db().execute('CREATE UNIQUE INDEX IF NOT EXISTS users_phone_hash ON users(phone_hash)')
+        db().commit()
+
+    oauth = OAuth(app)
+    google_enabled = bool(os.environ.get('GOOGLE_CLIENT_ID') and os.environ.get('GOOGLE_CLIENT_SECRET'))
+    facebook_version = os.environ.get('FACEBOOK_GRAPH_VERSION')
+    facebook_enabled = bool(os.environ.get('FACEBOOK_CLIENT_ID') and os.environ.get('FACEBOOK_CLIENT_SECRET') and facebook_version)
+    if google_enabled:
+        oauth.register(
+            name='google',
+            client_id=os.environ['GOOGLE_CLIENT_ID'],
+            client_secret=os.environ['GOOGLE_CLIENT_SECRET'],
+            server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+            client_kwargs={'scope': 'openid email profile'},
+        )
+    if facebook_enabled:
+        oauth.register(
+            name='facebook',
+            client_id=os.environ['FACEBOOK_CLIENT_ID'],
+            client_secret=os.environ['FACEBOOK_CLIENT_SECRET'],
+            authorize_url=f'https://www.facebook.com/{facebook_version}/dialog/oauth',
+            access_token_url=f'https://graph.facebook.com/{facebook_version}/oauth/access_token',
+            api_base_url=f'https://graph.facebook.com/{facebook_version}/',
+            client_kwargs={'scope': 'email,public_profile'},
+        )
     dummy_hash = generate_password_hash(secrets.token_hex(32))
 
     def token_hash(token):
         return hashlib.sha256(token.encode()).hexdigest()
+
+    def private_hash(value):
+        secret = app.config['SECRET_KEY']
+        if isinstance(secret, str):
+            secret = secret.encode()
+        return hmac.new(secret, value.encode(), hashlib.sha256).hexdigest()
+
+    def fake_email(provider, subject):
+        return f'{provider}-{private_hash(provider + ":" + subject)}@identity.invalid'
+
+    def create_external_user(provider, subject, name='Boxing athlete', phone_hash=None):
+        now = int(time.time())
+        cursor = db().execute(
+            'INSERT INTO users (name,email,password_hash,created_at,phone_hash) VALUES (?,?,?,?,?)',
+            (name[:80] or 'Boxing athlete', fake_email(provider, subject),
+             generate_password_hash(secrets.token_urlsafe(48)), now, phone_hash),
+        )
+        user_id = cursor.lastrowid
+        if provider != 'phone':
+            db().execute('INSERT INTO social_identities (provider,subject,user_id) VALUES (?,?,?)', (provider, subject, user_id))
+        db().commit()
+        return user_id
+
+    def external_user(provider, subject, name='Boxing athlete'):
+        linked = db().execute(
+            'SELECT user_id FROM social_identities WHERE provider = ? AND subject = ?', (provider, subject)
+        ).fetchone()
+        if linked:
+            return linked['user_id']
+        return create_external_user(provider, subject, name)
+
+    def provider_flags():
+        return {
+            'google_enabled': google_enabled,
+            'facebook_enabled': facebook_enabled,
+            'phone_enabled': all(os.environ.get(key) for key in ('TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_VERIFY_SERVICE_SID')),
+        }
+
+    def render_auth_page(signup=False, error=None, status=200, name='', email='', phone='', code_sent=False):
+        return render_template(
+            'auth.html', signup=signup, error=error, name=name, email=email,
+            phone=phone, code_sent=code_sent, **provider_flags()
+        ), status
+
+    def consume_phone_attempt(phone_digest, action, limit):
+        connection = db()
+        now = int(time.time())
+        connection.execute('DELETE FROM phone_auth_attempts WHERE attempted_at < ?', (now - 900,))
+        attempts = connection.execute(
+            'SELECT count(*) FROM phone_auth_attempts WHERE phone_hash = ? AND action = ? AND attempted_at > ?',
+            (phone_digest, action, now - 900),
+        ).fetchone()[0]
+        if attempts >= limit:
+            connection.commit()
+            return False
+        connection.execute('INSERT INTO phone_auth_attempts VALUES (?,?,?)', (phone_digest, action, now))
+        connection.commit()
+        return True
+
+    def start_guest_session():
+        session.clear()
+        session.permanent = True
+        session['guest_mode'] = True
+        session['csrf_token'] = secrets.token_urlsafe(32)
 
     @app.before_request
     def load_account_and_check_csrf():
@@ -122,6 +229,8 @@ def create_app(test_config=None):
     @app.route('/login', methods=['GET', 'POST'])
     def auth():
         if g.user:
+            return redirect(url_for('tracker'))
+        if session.get('guest_mode'):
             return redirect(url_for('tracker'))
         signup = request.path == '/signup'
         error = None
@@ -168,7 +277,111 @@ def create_app(test_config=None):
                     error = 'Email or password is incorrect.'
                 if error:
                     status = 400
-        return render_template('auth.html', signup=signup, error=error, name=name, email=email), status
+        return render_auth_page(signup=signup, error=error, status=status, name=name, email=email)
+
+    @app.get('/guest')
+    def guest():
+        start_guest_session()
+        return redirect(url_for('tracker'), code=303)
+
+    @app.get('/auth/google')
+    def google_login():
+        if not google_enabled:
+            return render_auth_page(error='Google sign-in has not been configured yet.', status=503)
+        return oauth.google.authorize_redirect(url_for('google_callback', _external=True))
+
+    @app.get('/auth/google/callback')
+    def google_callback():
+        if not google_enabled:
+            return render_auth_page(error='Google sign-in has not been configured yet.', status=503)
+        try:
+            token = oauth.google.authorize_access_token()
+            profile = token.get('userinfo') or oauth.google.parse_id_token(token)
+            subject = profile.get('sub')
+            if not subject or not profile.get('email_verified'):
+                return render_auth_page(error='Google did not confirm this account. Please try another sign-in method.', status=400)
+            user_id = external_user('google', subject, profile.get('name') or 'Boxing athlete')
+            start_session(user_id)
+            return redirect(url_for('tracker'), code=303)
+        except Exception:
+            return render_auth_page(error='Google sign-in could not be completed. Please try again.', status=400)
+
+    @app.get('/auth/facebook')
+    def facebook_login():
+        if not facebook_enabled:
+            return render_auth_page(error='Facebook sign-in needs its app credentials and Graph API version.', status=503)
+        return oauth.facebook.authorize_redirect(url_for('facebook_callback', _external=True))
+
+    @app.get('/auth/facebook/callback')
+    def facebook_callback():
+        if not facebook_enabled:
+            return render_auth_page(error='Facebook sign-in has not been configured yet.', status=503)
+        try:
+            oauth.facebook.authorize_access_token()
+            profile = oauth.facebook.get('me', params={'fields': 'id,name,email'}).json()
+            subject = profile.get('id')
+            if not subject:
+                return render_auth_page(error='Facebook did not return an account ID.', status=400)
+            user_id = external_user('facebook', subject, profile.get('name') or 'Boxing athlete')
+            start_session(user_id)
+            return redirect(url_for('tracker'), code=303)
+        except Exception:
+            return render_auth_page(error='Facebook sign-in could not be completed. Please try again.', status=400)
+
+    @app.post('/phone/send')
+    def phone_send():
+        phone = request.form.get('phone', '').strip()
+        if not re.fullmatch(r'\+[1-9]\d{7,14}', phone):
+            return render_auth_page(error='Enter your number with a country code, such as +14155552671.', status=400, phone=phone)
+        if not provider_flags()['phone_enabled']:
+            return render_auth_page(error='Phone sign-in has not been configured yet.', status=503, phone=phone)
+        digest = private_hash(phone)
+        if not consume_phone_attempt(digest, 'send', 3):
+            return render_auth_page(error='Too many codes requested. Wait 15 minutes and try again.', status=429, phone=phone)
+        try:
+            client = TwilioClient(os.environ['TWILIO_ACCOUNT_SID'], os.environ['TWILIO_AUTH_TOKEN'])
+            client.verify.v2.services(os.environ['TWILIO_VERIFY_SERVICE_SID']).verifications.create(to=phone, channel='sms')
+            session['phone_challenge_hash'] = digest
+            session['phone_challenge_at'] = int(time.time())
+            return render_auth_page(phone=phone, code_sent=True)
+        except Exception:
+            return render_auth_page(error='Could not send a verification code. Check the number and try again.', status=400, phone=phone)
+
+    @app.post('/phone/verify')
+    def phone_verify():
+        phone = request.form.get('phone', '').strip()
+        code = request.form.get('code', '').strip()
+        if not re.fullmatch(r'\+[1-9]\d{7,14}', phone) or not re.fullmatch(r'\d{4,10}', code):
+            return render_auth_page(error='Enter the phone number and verification code.', status=400, phone=phone, code_sent=True)
+        digest = private_hash(phone)
+        challenge = session.get('phone_challenge_hash', '')
+        if (not challenge or not secrets.compare_digest(challenge, digest)
+                or int(time.time()) - session.get('phone_challenge_at', 0) > 600):
+            session.pop('phone_challenge_hash', None)
+            session.pop('phone_challenge_at', None)
+            return render_auth_page(error='That code request expired. Request a new code.', status=400, phone=phone)
+        if not consume_phone_attempt(digest, 'check', 6):
+            return render_auth_page(error='Too many code attempts. Wait 15 minutes and try again.', status=429, phone=phone, code_sent=True)
+        try:
+            client = TwilioClient(os.environ['TWILIO_ACCOUNT_SID'], os.environ['TWILIO_AUTH_TOKEN'])
+            result = client.verify.v2.services(os.environ['TWILIO_VERIFY_SERVICE_SID']).verification_checks.create(to=phone, code=code)
+            if result.status != 'approved':
+                return render_auth_page(error='That verification code was not accepted.', status=400, phone=phone, code_sent=True)
+            user = db().execute('SELECT id FROM users WHERE phone_hash = ?', (digest,)).fetchone()
+            user_id = user['id'] if user else create_external_user('phone', digest, 'Phone user', digest)
+            session.pop('phone_challenge_hash', None)
+            session.pop('phone_challenge_at', None)
+            start_session(user_id)
+            return redirect(url_for('tracker'), code=303)
+        except sqlite3.IntegrityError:
+            db().rollback()
+            user = db().execute('SELECT id FROM users WHERE phone_hash = ?', (digest,)).fetchone()
+            if user:
+                start_session(user['id'])
+                return redirect(url_for('tracker'), code=303)
+            return render_auth_page(error='Could not finish phone sign-in. Request a new code.', status=400, phone=phone)
+        except Exception:
+            return render_auth_page(error='Phone verification failed. Request a new code and try again.', status=400, phone=phone, code_sent=True)
 
     @app.post('/logout')
     def logout():
@@ -182,7 +395,7 @@ def create_app(test_config=None):
     @app.get('/')
     @app.get('/index.html')
     def tracker():
-        if not g.user:
+        if not g.user and not session.get('guest_mode'):
             return redirect('/login')
         # Keep the existing tracker markup as the single source of truth.
         return app.jinja_env.from_string((ROOT / 'index.html').read_text()).render()

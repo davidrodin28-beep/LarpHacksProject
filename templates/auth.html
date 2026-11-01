@@ -23,6 +23,11 @@
       <h2 id="auth-title">{{ 'Create your account' if signup else 'Log in to Stillwatch' }}</h2>
       <p>{{ 'Your next alter ego starts here.' if signup else 'Your next session starts here.' }}</p>
       {% if error %}<div class="auth-error" role="alert">{{ error }}</div>{% endif %}
+      <div class="social-options" aria-label="Sign-in options">
+        <a class="provider-button" href="/auth/google">Continue with Google{% if not google_enabled %}<small>setup needed</small>{% endif %}</a>
+        <a class="provider-button" href="/auth/facebook">Continue with Facebook{% if not facebook_enabled %}<small>setup needed</small>{% endif %}</a>
+      </div>
+      <div class="auth-divider"><span>OR USE EMAIL</span></div>
       <form method="post" action="{{ '/signup' if signup else '/login' }}" class="auth-form">
         <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
         {% if signup %}<label for="name">Name</label><input id="name" name="name" autocomplete="name" maxlength="80" value="{{ name }}" required>{% endif %}
@@ -31,6 +36,28 @@
         {% if signup %}<p id="password-help" class="auth-help">Use 12–128 characters. A longer passphrase works well.</p><label for="confirm_password">Confirm password</label><input id="confirm_password" type="password" name="confirm_password" autocomplete="new-password" minlength="12" maxlength="128" required>{% endif %}
         <button class="primary auth-submit" type="submit">{{ 'Create account' if signup else 'Log in' }} <span aria-hidden="true">↗</span></button>
       </form>
+      <div class="auth-divider"><span>OR USE YOUR PHONE</span></div>
+      {% if code_sent %}
+      <form method="post" action="/phone/verify" class="auth-form alternate-form">
+        <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
+        <label for="verify-phone">Phone number</label><input id="verify-phone" type="tel" name="phone" autocomplete="tel" value="{{ phone }}" pattern="\+[1-9][0-9]{7,14}" placeholder="+14155552671" required>
+        <label for="code">SMS verification code</label><input id="code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{4,10}" maxlength="10" required>
+        <p class="auth-help">Code sent. It expires after 10 minutes.</p>
+        <button class="primary auth-submit" type="submit">Verify and log in <span aria-hidden="true">↗</span></button>
+      </form>
+      {% else %}
+      <form method="post" action="/phone/send" class="auth-form alternate-form">
+        <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
+        <label for="phone">Phone number with country code</label><input id="phone" type="tel" name="phone" autocomplete="tel" value="{{ phone }}" pattern="\+[1-9][0-9]{7,14}" placeholder="+14155552671" required>
+        <p class="auth-help">Your number goes to Twilio for verification. SMS or carrier charges may apply.</p>
+        <button class="primary auth-submit" type="submit">Text me a sign-in code <span aria-hidden="true">↗</span></button>
+      </form>
+      {% endif %}
+      <div class="auth-divider"><span>OR TRY IT FIRST</span></div>
+      <div class="guest-form">
+        <a class="guest-button" href="/guest">Continue as guest <span aria-hidden="true">↗</span></a>
+      </div>
+      <p class="auth-help guest-note">No account needed. Your session ends when you log out; it isn’t saved to an account.</p>
       <p class="auth-switch">{{ 'Already have an account?' if signup else 'New to Stillwatch?' }} <a href="{{ '/login' if signup else '/signup' }}">{{ 'Log in' if signup else 'Create an account' }}</a></p>
     </section>
   </main>
