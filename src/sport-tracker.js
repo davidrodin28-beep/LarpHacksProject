@@ -52,6 +52,98 @@ export class SportTracker {
     b[key]=Number((b[total]/b[samples]).toFixed(digits));
     return b[key];
   }
+  snapshot() { return {...this.bucket()}; }
+  summarizeRound(before={},chinTuckPercent=null) {
+    const d=this.bucket();
+    const delta=key=>Math.max(0,(d[key]||0)-(before[key]||0));
+    const averageSince=key=>{
+      const samples=delta(key+'Samples'),total=(d[key+'Total']||0)-(before[key+'Total']||0);
+      return samples>0?Math.round(total/samples):null;
+    };
+    const tip=[];
+    let activity=0,quality=null,activityText='No movement cycles were detected';
+    const score=(qualityWeight=0.65)=>activity===0?0:quality===null?activity:Math.round(quality*qualityWeight+activity*(1-qualityWeight));
+
+    if(this.sport==='Boxing') {
+      const jabs=delta('jabs'),crosses=delta('crosses'),combos=delta('combos'),punches=jabs+crosses;
+      const jabForm=averageSince('jabForm'),crossForm=averageSince('crossForm');
+      const extension=[jabForm,crossForm].filter(Number.isFinite);
+      const comboQuality=punches?Math.min(100,Math.round(combos/Math.max(1,Math.min(jabs,crosses))*100)):0;
+      quality=extension.length?(extension.reduce((sum,n)=>sum+n,0)/extension.length)*(chinTuckPercent===null?0.72:0.58)+comboQuality*(chinTuckPercent===null?0.28:0.22):null;
+      if(chinTuckPercent!==null) quality=(quality??0)+chinTuckPercent*0.20;
+      activity=Math.min(100,punches*7+combos*10);
+      activityText=`${jabs} jabs · ${crosses} crosses · ${combos} complete 1–2s`;
+      if(punches===0)tip.push('Start from guard, then extend each arm far enough for a clear punch cycle.');
+      else if(combos===0)tip.push('Link the lead jab into a rear cross to complete more 1–2s.');
+      else if(comboQuality<65)tip.push('Return the lead hand toward guard before extending the rear cross.');
+      const formValues=[jabForm,crossForm].filter(Number.isFinite);
+      if(formValues.length&&Math.min(...formValues)<72)tip.push('Reach closer to full elbow extension while keeping the wrist aligned.');
+      if(chinTuckPercent===null)tip.push('Keep your face visible during setup for chin feedback.');
+      else if(chinTuckPercent<45)tip.push(`Tuck your chin while keeping your eyes forward; it was tucked in ${chinTuckPercent}% of visible samples.`);
+      else tip.push(`Chin-tuck estimate: ${chinTuckPercent}% of visible round samples.`);
+    } else if(this.sport==='Basketball') {
+      const shots=delta('shots'),jumps=delta('jumps');
+      quality=averageSince('releaseForm'); activity=Math.min(100,shots*18+jumps*7);
+      activityText=`${shots} shot-like releases · ${jumps} jumps`;
+      if(shots===0)tip.push('Begin with a bent elbow and finish with the shooting wrist above your shoulder.');
+      else if(quality!==null&&quality<72)tip.push('Finish with a straighter elbow and raise the wrist above the shoulder.');
+      else tip.push('Keep the same smooth bent-to-overhead release on each repetition.');
+      if(jumps===0)tip.push('For jump feedback, keep hips and ankles visible and add a clear jump.');
+    } else if(['Tennis','Table tennis','Badminton'].includes(this.sport)) {
+      const swings=delta('swings'); quality=averageSince('extensionScore'); activity=Math.min(100,swings*13);
+      activityText=`${swings} racket-swing estimates · ${delta('forehands')} forehand-direction · ${delta('backhands')} backhand-direction`;
+      if(swings===0)tip.push('Use a clear wrist path across the camera view; racket and ball contact are not detected.');
+      else if(quality!==null&&quality<70)tip.push('Let the elbow extend farther through the visible swing path.');
+      else tip.push('Alternate stroke directions and return to a ready position between swings.');
+    } else if(this.sport==='Archery') {
+      const holds=delta('holds'),hold=averageSince('holdSeconds'),alignment=averageSince('alignmentScore'),extension=averageSince('extensionScore');
+      quality=[alignment,extension].filter(Number.isFinite).reduce((sum,n,a,arr)=>sum+n/arr.length,0);
+      if(!Number.isFinite(quality))quality=null;
+      activity=Math.min(100,holds*24+(hold||0)*6); activityText=`${holds} stable draw holds${hold===null?'':` · ${hold}s average hold`}`;
+      if(holds===0)tip.push('Set one arm extended and one bent, keep both wrists near shoulder height, then hold steady.');
+      else if(alignment!==null&&alignment<75)tip.push('Level your shoulders and keep both wrists closer to the same height.');
+      else tip.push('Keep the draw steady through the full hold.');
+      if(extension!==null&&extension<72)tip.push('Straighten the bow-side arm more while keeping the opposite elbow bent.');
+    } else if(this.sport==='Volleyball') {
+      const swings=delta('swings'),jumps=delta('jumps');quality=averageSince('extensionScore');activity=Math.min(100,swings*13+jumps*7);
+      activityText=`${swings} overhead swings · ${jumps} jumps`;
+      if(swings===0)tip.push('Raise from a bent arm and finish with a clear overhead extension.');
+      else if(quality!==null&&quality<72)tip.push('Reach through a straighter elbow at the overhead finish.');
+      else tip.push('Keep the overhead reach consistent and land under control.');
+      if(jumps===0)tip.push('Keep hips and ankles in frame for jump estimates.');
+    } else if(this.sport==='Soccer') {
+      const kicks=delta('kicks'),left=delta('leftKicks'),right=delta('rightKicks');quality=averageSince('kickScore');activity=Math.min(100,kicks*16);
+      activityText=`${kicks} kick-like cycles · ${left} left · ${right} right`;
+      if(kicks===0)tip.push('Show a clear knee bend followed by leg extension; keep the full leg in frame.');
+      else if(Math.abs(left-right)>Math.max(1,kicks*0.3))tip.push('Practice the less-used side to balance left and right kick cycles.');
+      else if(quality!==null&&quality<70)tip.push('Complete each kick with a clearer leg extension.');
+      else tip.push('Keep the same full-leg motion on both sides.');
+    } else if(this.sport==='Running') {
+      const steps=delta('steps'),left=delta('leftSteps'),right=delta('rightSteps');
+      const balance=steps?Math.round(100-Math.abs(left-right)/steps*100):null;
+      quality=balance;activity=Math.min(100,steps*3);activityText=`${steps} alternating knee-lift steps · ${d.cadence||0} estimated steps/min`;
+      if(steps===0)tip.push('Keep hips and knees visible and lift each knee clearly in turn.');
+      else if(balance<75)tip.push('Make the left and right knee lifts more even.');
+      else tip.push('Keep the alternating rhythm steady; this camera estimate is not a foot-strike measure.');
+    } else if(this.sport==='Golf') {
+      const swings=delta('swings'),turn=averageSince('turnScore'),extension=averageSince('extensionScore');
+      quality=[turn,extension].filter(Number.isFinite).reduce((sum,n,a,arr)=>sum+n/arr.length,0);
+      if(!Number.isFinite(quality))quality=null;
+      activity=Math.min(100,swings*15);activityText=`${swings} swing estimates · ${averageSince('tempo')??0}s estimated tempo`;
+      if(swings===0)tip.push('Make a broad, controlled cross-body swing with shoulders and hips in view.');
+      else if(turn!==null&&turn<70)tip.push('Rotate your shoulders farther through the swing while keeping balance.');
+      else tip.push('Keep the swing tempo smooth and finish with your arms extended.');
+    } else {
+      const throws=delta('throws');quality=averageSince('releaseScore');activity=Math.min(100,throws*17);
+      activityText=`${throws} overhead throw-like motions · ${delta('leftThrows')} left · ${delta('rightThrows')} right`;
+      if(throws===0)tip.push('Start with a bent elbow and complete a visible overhead arm extension.');
+      else if(quality!==null&&quality<72)tip.push('Extend the throwing elbow more fully at the overhead finish.');
+      else tip.push('Keep the overhead motion controlled; this does not measure throwing speed or release accuracy.');
+    }
+    const measuredQuality=Number.isFinite(quality)?Math.round(clamp(quality,0,100)):null;
+    const totalScore=activity===0?0:measuredQuality===null?activity:score();
+    return {sport:this.sport,score:Math.round(clamp(totalScore,0,100)),activityText,tips:tip.slice(0,2),chinTuckPercent};
+  }
   get metrics() {
     const d=this.bucket();
     if(this.sport==='Boxing') return [

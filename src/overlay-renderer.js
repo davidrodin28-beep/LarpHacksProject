@@ -165,6 +165,7 @@ export class OverlayRenderer {
     const rightEye = midpoint(362, 263);
     const nose = face[1];
     const mouth = midpoint(13, 14);
+    const chin = face[152];
     const center = {
       x: (leftEye.x + rightEye.x + nose.x + mouth.x) / 4,
       y: (leftEye.y + rightEye.y + nose.y + mouth.y) / 4,
@@ -181,6 +182,10 @@ export class OverlayRenderer {
     this.#faceFeature(leftEye, 'EYE', '#6be3cb', -12, -7);
     this.#faceFeature(rightEye, 'EYE', '#6be3cb', 12, -7);
     this.#faceFeature(mouth, 'MOUTH', '#e795ff', 0, Math.max(13, this.canvas.width / 50));
+    if(chin) {
+      this.#drawSegment(mouth,chin,0);
+      this.#faceFeature(chin,'CHIN','#c4f06a',0,Math.max(15,this.canvas.width/48));
+    }
   }
 
   #faceFeature(point, name, color, offsetX = 0, offsetY = 0) {

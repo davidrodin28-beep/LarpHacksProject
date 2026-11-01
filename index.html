@@ -32,6 +32,22 @@
           <label class="source sport-stance" id="sportStanceRow" for="sportStance">Stance <select id="sportStance"><option value="Left">Orthodox · left jab</option><option value="Right">Southpaw · right jab</option></select></label>
           <div class="sport-metrics metric-grid" id="sportMetrics" aria-live="polite"></div>
           <p class="helper sport-description" id="sportDescription"></p>
+          <div class="chin-readout" aria-live="polite"><span>CHIN POSITION</span><strong id="chinStatus">Face camera during the round setup</strong></div>
+          <div class="practice-round" id="practiceRound">
+            <div class="round-heading"><span>Timed practice</span><small>CAMERA COACHING ESTIMATE</small></div>
+            <div class="round-controls">
+              <label class="source" for="roundDuration">Length <select id="roundDuration"><option value="10" selected>10 seconds</option><option value="20">20 seconds</option><option value="30">30 seconds</option></select></label>
+              <button class="btn primary" id="roundStart" type="button" disabled>Start round</button>
+            </div>
+            <div class="round-clock" id="roundClock" role="status" aria-live="polite">Start camera and finish hand setup.</div>
+            <div class="round-progress" aria-hidden="true"><span id="roundProgress"></span></div>
+            <section class="round-result" id="roundResult" hidden aria-live="polite">
+              <div class="round-score"><strong id="roundScore">0</strong><span>/ 100</span></div>
+              <p class="round-activity" id="roundActivity"></p>
+              <ul id="roundTips"></ul>
+            </section>
+            <p class="helper">Hold a relaxed neutral pose during the short countdown. Each round gives a movement score and one or two measurable practice cues. This is not professional coaching.</p>
+          </div>
         </section>
         <section class="panel side-card slip-card" aria-label="Automatic head slip counter">
           <div class="side-title">Head slips <small>AUTOMATIC</small></div>

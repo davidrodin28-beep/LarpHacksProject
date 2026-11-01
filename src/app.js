@@ -1,4 +1,5 @@
 import { CameraSource } from './camera-source.js';
+import { ChinTracker } from './chin-tracker.js';
 import { HandEnrollment } from './hand-enrollment.js';
 import { INFERENCE_INTERVAL_MS } from './config.js';
 import { MovementCounter } from './movement-counter.js';
@@ -22,6 +23,15 @@ const ui = {
   sportStanceRow: $('sportStanceRow'),
   sportMetrics: $('sportMetrics'),
   sportDescription: $('sportDescription'),
+  chinStatus: $('chinStatus'),
+  roundDuration: $('roundDuration'),
+  roundStart: $('roundStart'),
+  roundClock: $('roundClock'),
+  roundProgress: $('roundProgress'),
+  roundResult: $('roundResult'),
+  roundScore: $('roundScore'),
+  roundActivity: $('roundActivity'),
+  roundTips: $('roundTips'),
   handsStatus: $('handsStatus'),
   startButton: $('startBtn'),
   pauseButton: $('pauseBtn'),
@@ -54,10 +64,14 @@ const enrollment = new HandEnrollment();
 const motion = new MotionMeter();
 const movementCounter = new MovementCounter();
 const sportTracker = new SportTracker(ui.sportSelect.value);
+const chinTracker = new ChinTracker();
 const renderer = new OverlayRenderer(ui.video, ui.canvas);
 const graphBars = [];
 let handOverlays = [];
 let lastHandObservation = null;
+let lastFaceObservation = null;
+
+const practiceRound = { phase:'idle', duration:10, prepareEndsAt:0, startsAt:0, endsAt:0, snapshot:null };
 
 let running = false;
 let paused = false;
@@ -131,6 +145,81 @@ function renderSportStats() {
   ui.sportStanceRow.hidden=sportTracker.sport!=='Boxing';
 }
 
+function updatePracticeControls() {
+  const busy=practiceRound.phase==='preparing'||practiceRound.phase==='active';
+  ui.roundDuration.disabled=busy;
+  ui.roundStart.disabled=!running||enrollment.calibrating||paused||busy;
+  ui.roundStart.textContent=busy
+    ? practiceRound.phase==='preparing'?'Get ready…':'Round in progress'
+    : practiceRound.phase==='complete'?'Run again':`Start ${ui.roundDuration.value}s round`;
+}
+
+function resetPracticeRound(message='Start camera and finish hand setup.') {
+  practiceRound.phase='idle';
+  practiceRound.snapshot=null;
+  ui.roundClock.textContent=message;
+  ui.roundProgress.style.width='0%';
+  ui.roundResult.hidden=true;
+  chinTracker.reset();
+  ui.chinStatus.textContent='Face camera during the round setup';
+  updatePracticeControls();
+}
+
+function startPracticeRound() {
+  if(!running||enrollment.calibrating||paused||practiceRound.phase==='preparing'||practiceRound.phase==='active')return;
+  practiceRound.duration=Number(ui.roundDuration.value);
+  practiceRound.phase='preparing';
+  practiceRound.prepareEndsAt=performance.now()+3000;
+  practiceRound.snapshot=null;
+  chinTracker.beginCalibration();
+  ui.roundResult.hidden=true;
+  ui.roundClock.textContent='Stand relaxed and face the camera — chin baseline';
+  ui.roundProgress.style.width='0%';
+  updatePracticeControls();
+}
+
+function finishPracticeRound() {
+  const report=sportTracker.summarizeRound(practiceRound.snapshot||{},chinTracker.tuckPercent);
+  practiceRound.phase='complete';
+  ui.roundProgress.style.width='100%';
+  ui.roundClock.textContent=`${practiceRound.duration}-second round complete`;
+  ui.roundScore.textContent=String(report.score);
+  ui.roundActivity.textContent=report.activityText;
+  ui.roundTips.replaceChildren();
+  for(const tip of report.tips) {
+    const item=document.createElement('li');
+    item.textContent=tip;
+    ui.roundTips.append(item);
+  }
+  ui.roundResult.hidden=false;
+  updatePracticeControls();
+}
+
+function updatePracticeRound(now) {
+  if(practiceRound.phase==='preparing') {
+    const remaining=Math.max(0,practiceRound.prepareEndsAt-now);
+    const countdown=Math.ceil(remaining/1000);
+    ui.roundClock.textContent=remaining>0
+      ? `${countdown} — stand neutral for chin baseline`
+      : 'Go!';
+    ui.roundProgress.style.width=`${Math.min(100,(1-remaining/3000)*100)}%`;
+    if(remaining<=0) {
+      practiceRound.snapshot=sportTracker.snapshot();
+      chinTracker.finishCalibration();
+      practiceRound.phase='active';
+      practiceRound.startsAt=now;
+      practiceRound.endsAt=now+practiceRound.duration*1000;
+      ui.roundClock.textContent=`${practiceRound.duration}s — go!`;
+      updatePracticeControls();
+    }
+  } else if(practiceRound.phase==='active') {
+    const remaining=Math.max(0,practiceRound.endsAt-now);
+    ui.roundClock.textContent=`${Math.ceil(remaining/1000)} seconds left`;
+    ui.roundProgress.style.width=`${Math.min(100,(1-remaining/(practiceRound.duration*1000))*100)}%`;
+    if(remaining<=0)finishPracticeRound();
+  }
+}
+
 function updateCalibrationStatus() {
   ui.calibrationStatus.textContent = enrollment.statusMessage;
   if (enrollment.autoReady(performance.now())) finishSetup();
@@ -158,6 +247,12 @@ function loop() {
       lastVideoTime = ui.video.currentTime;
       try {
         results = vision.detect(ui.video, now);
+        if(results.face!==lastFaceObservation) {
+          lastFaceObservation=results.face;
+          const facePhase=practiceRound.phase==='preparing'||practiceRound.phase==='active'?practiceRound.phase:'idle';
+          chinTracker.sample(results.face,facePhase,ui.video.videoWidth/ui.video.videoHeight);
+          if(practiceRound.phase==='preparing'||practiceRound.phase==='active')ui.chinStatus.textContent=chinTracker.status;
+        }
         const freshHands = results.hands !== lastHandObservation;
         if (freshHands) {
           lastHandObservation = results.hands;
@@ -187,6 +282,7 @@ function loop() {
       }
     }
     updateMetrics(motion.sample(ui.video, Number(ui.sensitivity.value)));
+    updatePracticeRound(performance.now());
   }
 
   drawFrame();
@@ -205,6 +301,7 @@ async function startCamera() {
     lastInference = 0;
     lastVideoTime = -1;
     results = { pose: null, hands: null, face: null };
+    lastFaceObservation = null;
     motion.reset();
     movementCounter.resetGesture();
     ui.movementStatus.textContent = 'Select hands to begin';
@@ -247,6 +344,7 @@ async function startCamera() {
 function stopCamera() {
   running = false;
   paused = false;
+  resetPracticeRound('Start camera and finish hand setup.');
   movementCounter.resetGesture();
   ui.handsStatus.textContent = 'Camera off';
   ui.movementStatus.textContent = 'Camera off';
@@ -276,6 +374,7 @@ function togglePause() {
   ui.movementStatus.textContent = paused ? 'Paused' : 'Counting automatically';
   ui.slipStatus.textContent = paused ? 'Paused' : 'Face camera; hold head centered briefly';
   movementCounter.resetGesture();
+  updatePracticeControls();
   ui.pauseButton.innerHTML = paused
     ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="m8 5 11 7-11 7z"/></svg>Resume analysis'
     : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5v14M15 5v14"/></svg>Pause analysis';
@@ -306,6 +405,7 @@ function saveSnapshot() {
 }
 
 function resetMetrics() {
+  resetPracticeRound(running?'Camera ready — start a round when you are.':'Start camera and finish hand setup.');
   motion.reset();
   movementCounter.reset();
   for (const key of ['arms','opens','closes','tilts','slips']) ui[key].textContent = '0';
@@ -352,6 +452,7 @@ function finishSetup() {
   ui.pauseButton.disabled = false;
   movementCounter.resetGesture();
   ui.movementStatus.textContent = 'Counting automatically';
+  updatePracticeControls();
   lastHandObservation = null;
   setCameraStatus(true);
   showToast(`Tracking ${enrollment.targets.length} selected hand${enrollment.targets.length === 1 ? '' : 's'}`);
@@ -367,6 +468,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 ui.sportSelect.addEventListener('change', () => {
+  if(practiceRound.phase!=='idle')resetPracticeRound('Sport changed — start a new round.');
   sportTracker.setSport(ui.sportSelect.value);
   renderSportStats();
   if (running) showToast(`${ui.sportSelect.value} tracking selected`);
@@ -374,10 +476,13 @@ ui.sportSelect.addEventListener('change', () => {
 ui.sportStance.addEventListener('change', () => {
   sportTracker.setStance(ui.sportStance.value);
 });
+ui.roundStart.addEventListener('click',startPracticeRound);
+ui.roundDuration.addEventListener('change',updatePracticeControls);
 
 function reselectHands() {
   enrollment.expectedHands = Number(ui.handCount.value);
   if (!running) return;
+  resetPracticeRound('Hands reselected — wait for setup to finish.');
   enrollment.begin();
   handOverlays=[];lastHandObservation=null;
   paused=false;movementCounter.resetGesture();
@@ -387,8 +492,10 @@ function reselectHands() {
   ui.calibrationStatus.textContent=enrollment.statusMessage;
   ui.handsStatus.textContent='Selecting hands';
   setCameraStatus(true,'HAND SETUP');
+  updatePracticeControls();
 }
 ui.handCount.addEventListener('change',reselectHands);
 $('reselectHands').addEventListener('click',reselectHands);
 sportTracker.setStance(ui.sportStance.value);
 renderSportStats();
+updatePracticeControls();

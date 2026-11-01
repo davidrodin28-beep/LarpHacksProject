@@ -30,6 +30,10 @@ Use the Sport selector to choose Basketball, Boxing, Tennis, Archery, Table tenn
 
 These are camera-based practice estimates, not professional coaching scores. Keep the upper body visible; for jump estimates, include shoulders, hips, and ankles. Camera angle, lighting, clothing, occlusion, and quick movements affect reliability. Jump lift is reported as a fraction of visible shoulder-to-ankle body length, not centimeters. Scores describe the landmarks the camera can see, not overall sport technique.
 
+## Timed practice
+
+After the camera finishes setup, choose a 10-, 20-, or 30-second round. The app gives a short neutral-pose countdown, then reports a 0–100 practice estimate and up to two sport-specific cues based on detected repetitions and form proxies. Boxing rounds also compare chin movement with the neutral countdown pose. Chin position is estimated from face landmarks; keep the face visible. A low tuck percentage prompts a cue to tuck the chin while keeping the eyes forward. These scores are relative practice feedback, not validated coaching or medical measurements.
+
 Automatic movement counters replace the 6-7 counter:
 - Arm extensions: each arm uses the 3D shoulder/elbow/wrist geometry. Reach is shoulder-to-wrist distance divided by upper-arm plus forearm length. A bent arm (angle at most 120 degrees and reach at most 90%) followed by a nearly straight arm (angle at least 150 degrees and reach at least 96%) adds one repetition. This ratio is invariant to 3D rotation and scale; projected shoulder spacing is not used because it collapses in a side view. The live readout shows angle, reach percentage, and whether 3D or 2D geometry is available. The 2D fallback is less reliable for arms pointing at the camera. Switching geometry modes clears partial repetitions. Partly obscured arms require two confirming samples; clear 3D arms accept a single extension sample to catch quick movements. Short tracking gaps up to 250 ms retain the starting bend; longer loss clears it.
 - Hand opens and closes: each enrolled hand has separate open/closed state transitions, summed in the two totals. The initial hand pose does not count.
@@ -47,6 +51,7 @@ Pause analysis pauses counters; Reset data clears totals. Low-confidence or miss
 - `src/camera-source.js` owns camera enumeration and stream lifecycle.
 - `src/vision-pipeline.js` initializes MediaPipe and returns pose, hand, and face results.
 - `src/slip-counter.js` calibrates and counts head slips relative to the shoulders.
+- `src/chin-tracker.js` estimates chin tucking from face landmarks during timed rounds.
 - `src/hand-matcher.js` associates enrolled hands with fresh detections using motion and pose anchors.
 - `src/hand-enrollment.js` enrolls the selected number of hands from stable detections without requiring a gesture.
 - `src/sport-tracker.js` computes sport-specific movement estimates and per-session sport statistics.
