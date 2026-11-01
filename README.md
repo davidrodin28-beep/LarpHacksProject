@@ -1,6 +1,6 @@
 # Stillwatch Motion Tracker
 
-A small browser app that detects movement and tracks the head, shoulders, elbows, wrists, and hand(s) you select. At camera startup, make a fist and open each hand you want enrolled, then confirm the selection. Hands that do not complete the gesture are ignored. Pose tracking follows each selected arm from shoulder through elbow to wrist, while hand tracking follows the wrist and finger joints. This helps keep the arm visible when a hand turns or the person turns sideways. Head position uses face landmarks around the nose, eyes, and mouth. Camera frames are processed in the browser and are not uploaded or recorded.
+A small browser app that detects movement and tracks the head, shoulders, elbows, wrists, and hand(s) you select. Pose tracking draws both arms from shoulder through elbow to wrist, with enrolled arms emphasized. At camera startup, make a fist and open each hand you want enrolled, then confirm the selection. Hand skeletons for hands that do not complete the gesture are ignored. Hand tracking follows the wrist and finger joints, helping preserve the arm trace when a hand turns or the person turns sideways. Head position uses face landmarks around the nose, eyes, and mouth. Camera frames are processed in the browser and are not uploaded or recorded.
 
 ## Run it
 

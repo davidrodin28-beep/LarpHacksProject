@@ -96,18 +96,19 @@ export class OverlayRenderer {
     }
 
     for (const arm of ARMS) {
-      if (!selectedSides.includes(arm.side)) continue;
       const shoulder = pose[arm.shoulder];
       const elbow = pose[arm.elbow];
       const wrist = pose[arm.wrist];
-      context.lineWidth = Math.max(2.5, canvas.width / 500);
-      context.strokeStyle = arm.color;
-      this.#drawSegment(shoulder, elbow, 0.25);
-      this.#drawSegment(elbow, wrist, 0.2);
-      this.#dot(elbow, arm.color, 6, 0.25);
-      this.#dot(wrist, arm.color, 6, 0.2);
-      if (elbow && (elbow.visibility ?? 1) > 0.25) this.#label(`${arm.side.toUpperCase()} ELBOW`, elbow, arm.color);
-      if (wrist && (wrist.visibility ?? 1) > 0.2) this.#label(`${arm.side.toUpperCase()} WRIST`, wrist, arm.color);
+      const selected = selectedSides.includes(arm.side);
+      const color = selected ? arm.color : '#a8b5ac';
+      context.lineWidth = Math.max(selected ? 3 : 2, canvas.width / 500);
+      context.strokeStyle = color;
+      this.#drawSegment(shoulder, elbow, 0.05);
+      this.#drawSegment(elbow, wrist, 0.05);
+      this.#dot(elbow, color, selected ? 7 : 6, 0.05);
+      this.#dot(wrist, color, selected ? 7 : 6, 0.05);
+      if (elbow && (elbow.visibility ?? 1) > 0.05) this.#label(`${arm.side.toUpperCase()} ELBOW`, elbow, color);
+      if (wrist && (wrist.visibility ?? 1) > 0.05) this.#label(`${arm.side.toUpperCase()} WRIST`, wrist, color);
     }
   }
 
