@@ -1,47 +1,20 @@
-# Supabase handles accounts; Render serves only the allowlisted static build.
-# A second service (stillwatch-ai, FastAPI in sportgen/) invents and judges sports with NVIDIA Nemotron.
+# One Python Web Service serves the allowlisted website and the sport API.
+# Public URL: https://larphacksproject.onrender.com. Supabase handles accounts.
 services:
   - type: web
-    name: stillwatch
-    runtime: static
-    buildCommand: python3 scripts/build_static.py
-    staticPublishPath: ./dist
-    envVars:
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_PUBLISHABLE_KEY
-        sync: false
-      - key: SPORTGEN_API_URL
-        sync: false   # https://<stillwatch-ai service>.onrender.com, baked into index.html at build time
-    headers:
-      - path: /auth-config.json
-        name: Cache-Control
-        value: no-store
-      - path: /*
-        name: X-Content-Type-Options
-        value: nosniff
-      - path: /*
-        name: Referrer-Policy
-        value: strict-origin-when-cross-origin
-    routes:
-      - type: redirect
-        source: /login
-        destination: /login.html
-      - type: redirect
-        source: /signup
-        destination: /signup.html
-
-  - type: web
-    name: sportpau
+    name: larphacksproject
     runtime: python
     plan: free
-    rootDir: sportgen
-    buildCommand: pip install .
-    startCommand: uvicorn sportgen.server:app --host 0.0.0.0 --port $PORT
+    buildCommand: pip install -r requirements.txt && python3 scripts/build_static.py
+    startCommand: bash start.sh
     healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.7
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
       - key: SPORTGEN_API_KEY
         sync: false   # build.nvidia.com key for the "best" engine (Nemotron 3 Ultra)
       - key: SPORTGEN_FAST_API_KEY

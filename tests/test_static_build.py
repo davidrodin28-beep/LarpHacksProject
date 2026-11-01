@@ -13,6 +13,7 @@ class StaticBuildTests(unittest.TestCase):
             'SUPABASE_URL': 'https://example.supabase.co',
             'SUPABASE_PUBLISHABLE_KEY': 'sb_publishable_test',
             'SECRET_KEY': 'must-not-be-published',
+            'SPORTGEN_API_URL': 'http://localhost:8011',
         }):
             output = build(Path(temp) / 'dist')
             config = json.loads((output / 'auth-config.json').read_text())
@@ -22,6 +23,10 @@ class StaticBuildTests(unittest.TestCase):
             for path in ('server.py', 'instance', '.git', 'tests', 'templates', '.env'):
                 self.assertFalse((output / path).exists(), path)
             self.assertNotIn('{{', (output / 'index.html').read_text())
+            self.assertNotIn('sportgen-api', (output / 'index.html').read_text())
+            api_config = (output / 'src/config.js').read_text()
+            self.assertNotIn('localhost:8011', api_config)
+            self.assertIn('https://larphacksproject.onrender.com', api_config)
             self.assertNotIn('method="post"', (output / 'login.html').read_text())
             self.assertIn('disabled', (output / 'signup.html').read_text())
             (output / 'secret.key').write_text('stale')

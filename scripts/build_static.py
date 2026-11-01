@@ -28,14 +28,6 @@ def build(destination=None):
     output.mkdir(parents=True)
     for name in ('index.html', 'login.html', 'signup.html', 'forgot-password.html', 'reset-password.html'):
         shutil.copy2(ROOT / name, output / name)
-    # The AI sport engine lives on a separate Render service; the page reads its URL from a meta tag.
-    api = os.environ.get('SPORTGEN_API_URL', '').strip().rstrip('/')
-    if api:
-        if urlparse(api).scheme not in ('https', 'http'):
-            raise ValueError('SPORTGEN_API_URL must be an http(s) URL.')
-        index = output / 'index.html'
-        index.write_text(index.read_text().replace('<meta name="sportgen-api" content="">',
-                                                   f'<meta name="sportgen-api" content="{api}">'))
     for source in (ROOT / 'src').rglob('*'):
         if source.is_file() and source.suffix in ('.js', '.css'):
             target = output / source.relative_to(ROOT)

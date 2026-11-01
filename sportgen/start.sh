@@ -1,3 +1,4 @@
 #!/usr/bin/env bash
-# Start the sport engine on Render regardless of Root Directory (repo root or sportgen/).
-exec uvicorn sportgen.server:app --host 0.0.0.0 --port "${PORT:-10000}"
+set -euo pipefail
+# Use the shared website/API entrypoint even when invoked from this directory.
+exec bash "$(dirname "$0")/../start.sh"
