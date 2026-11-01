@@ -908,3 +908,43 @@ footer {
     max-height: 24dvh;
   }
 }
+
+/* Lessons share the existing studio; the coach scrolls independently on desktop. */
+.studio { grid-template-columns: minmax(0, 1fr) minmax(280px, 340px); }
+.studio-top { gap: 12px; }
+.studio-bottom { overflow-y: auto; padding: 0 8px 4px 0; scrollbar-width: thin; }
+.session-summary { width: 100%; }
+.session-summary select { width: 100%; font-size: 14px; }
+.coach-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.coach-level { border: 1px solid var(--line); border-radius: 20px; padding: 4px 9px; font-size: 11px; color: var(--muted); }
+.move-label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 6px; }
+.lesson-title { font-size: 25px; margin: 20px 0 7px; }
+.lesson-steps { list-style: none; counter-reset: checkpoint; padding: 0; margin: 20px 0; }
+.lesson-steps li { counter-increment: checkpoint; position: relative; padding: 0 0 18px 32px; border-left: 1px solid var(--line); margin-left: 10px; }
+.lesson-steps li:last-child { padding-bottom: 0; border-left-color: transparent; }
+.lesson-steps li::before { content: counter(checkpoint); position: absolute; left: -11px; top: -2px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--bg); border: 1px solid var(--line); font-size: 11px; }
+.lesson-steps li.current::before { background: var(--lime); border-color: #688c35; }
+.lesson-steps li.done::before { content: '✓'; background: var(--sage); }
+.lesson-steps strong { font-size: 14px; font-weight: 500; }
+.session-summary .lesson-steps p { font-size: 12px; line-height: 1.65; margin-top: 5px; }
+.coach-feedback { background: var(--sage); border-radius: 10px; padding: 14px; margin: 16px 0 12px; }
+.coach-feedback strong { font-size: 13px; }
+.session-summary .coach-feedback p { font-size: 12px; margin-top: 6px; }
+.coach-feedback progress { display: block; width: 100%; height: 6px; margin-top: 12px; accent-color: #5f841f; }
+.studio-bottom .practice-button { width: 100%; max-width: none; font-size: 13px; }
+.session-summary .coach-help { font-size: 11px; margin-top: 8px; }
+.form-tips { margin: 18px 0; font-size: 12px; line-height: 1.6; }
+.form-tips summary { color: var(--ink); }
+.session-summary .form-tips p { font-size: 12px; margin-top: 8px; }
+.session-summary .extension-count { border-top: 1px solid var(--line); padding-top: 12px; font-size: 12px; }
+@media (max-width: 700px) and (min-height: 501px) {
+  .studio { overflow-y: auto; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto auto; }
+  .camera-slot { height: clamp(220px, 62vw, 390px); }
+  .studio-bottom { overflow: visible; flex-direction: column; align-items: stretch; padding: 0; }
+  .studio-bottom > .primary { max-width: none; width: 100%; }
+  .coach-heading .workspace-label { display: inline; }
+}
+@media (max-height: 500px) {
+  .studio { grid-template-columns: minmax(0, 1fr) 260px; }
+  .coach-heading { margin-bottom: 10px; }
+}
