@@ -27,13 +27,14 @@
         <a class="provider-button" href="/auth/google">Continue with Google{% if not google_enabled %}<small>setup needed</small>{% endif %}</a>
         <a class="provider-button" href="/auth/facebook">Continue with Facebook{% if not facebook_enabled %}<small>setup needed</small>{% endif %}</a>
       </div>
+      <p class="auth-help">Your first Google sign-in creates your account. Use Google again to sign in later.</p>
       <div class="auth-divider"><span>OR USE EMAIL</span></div>
       <form method="post" action="{{ '/signup' if signup else '/login' }}" class="auth-form">
         <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
         {% if signup %}<label for="name">Name</label><input id="name" name="name" autocomplete="name" maxlength="80" value="{{ name }}" required>{% endif %}
         <label for="email">Email address</label><input id="email" type="email" name="email" autocomplete="email" maxlength="254" value="{{ email }}" placeholder="you@example.com" required>
-        <label for="password">Password</label><input id="password" type="password" name="password" autocomplete="{{ 'new-password' if signup else 'current-password' }}" {% if signup %}minlength="12" aria-describedby="password-help"{% endif %} maxlength="128" required>
-        {% if signup %}<p id="password-help" class="auth-help">Use 12–128 characters. A longer passphrase works well.</p><label for="confirm_password">Confirm password</label><input id="confirm_password" type="password" name="confirm_password" autocomplete="new-password" minlength="12" maxlength="128" required>{% endif %}
+        <label for="password">Password</label><input id="password" type="password" name="password" autocomplete="{{ 'new-password' if signup else 'current-password' }}" {% if signup %}minlength="5" aria-describedby="password-help"{% endif %} maxlength="128" required>
+        {% if signup %}<p id="password-help" class="auth-help">Use 5–128 characters.</p><label for="confirm_password">Confirm password</label><input id="confirm_password" type="password" name="confirm_password" autocomplete="new-password" minlength="5" maxlength="128" required>{% endif %}
         <button class="primary auth-submit" type="submit">{{ 'Create account' if signup else 'Log in' }} <span aria-hidden="true">↗</span></button>
       </form>
       <div class="auth-divider"><span>OR USE YOUR PHONE</span></div>

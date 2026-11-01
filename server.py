@@ -257,8 +257,8 @@ def create_app(test_config=None):
                     error = 'Enter a valid email address.'
                 elif signup and not 1 <= len(name) <= 80:
                     error = 'Enter a name between 1 and 80 characters.'
-                elif not 12 <= len(password) <= 128:
-                    error = 'Use a password between 12 and 128 characters.' if signup else 'Email or password is incorrect.'
+                elif not 5 <= len(password) <= 128:
+                    error = 'Use a password between 5 and 128 characters.' if signup else 'Email or password is incorrect.'
                 elif signup and password != request.form.get('confirm_password'):
                     error = 'Your passwords do not match.'
                 elif signup:
