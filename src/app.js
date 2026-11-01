@@ -1,4 +1,3 @@
-import { HandFilter } from './hand-filter.js';
 import { CameraSource } from './camera-source.js';
 import { HandEnrollment } from './hand-enrollment.js';
 import { INFERENCE_INTERVAL_MS } from './config.js';
@@ -47,7 +46,6 @@ const motion = new MotionMeter();
 const movementCounter = new MovementCounter();
 const renderer = new OverlayRenderer(ui.video, ui.canvas);
 const graphBars = [];
-const handFilter = new HandFilter();
 let handOverlays = [];
 let lastHandObservation = null;
 
@@ -131,7 +129,7 @@ function loop() {
         results = vision.detect(ui.video, now);
         if (results.hands !== lastHandObservation) {
           lastHandObservation = results.hands;
-          handOverlays = handFilter.update(enrollment.visibleHands(results.hands, results.pose), now, ui.video.videoWidth/ui.video.videoHeight);
+          handOverlays = enrollment.visibleHands(results.hands, results.pose);
         }
         if (enrollment.calibrating) {
           enrollment.observe(results.hands, now);
@@ -169,7 +167,6 @@ async function startCamera() {
     motion.reset();
     movementCounter.resetGesture();
     ui.movementStatus.textContent = 'Select hands to begin';
-    handFilter.reset();
     handOverlays = [];
     lastHandObservation = null;
     enrollment.begin();
@@ -211,7 +208,6 @@ function stopCamera() {
   ui.movementStatus.textContent = 'Camera off';
   ui.slipStatus.textContent = 'Camera off';
   enrollment.reset();
-  handFilter.reset();
   handOverlays = [];
   lastHandObservation = null;
   cancelAnimationFrame(animationFrame);
@@ -310,7 +306,6 @@ function finishSetup() {
   movementCounter.resetGesture();
   ui.movementStatus.textContent = 'Counting automatically';
   lastHandObservation = null;
-  handFilter.reset();
   setCameraStatus(true);
   showToast(`Tracking ${enrollment.targets.length} selected hand${enrollment.targets.length === 1 ? '' : 's'}`);
 }

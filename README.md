@@ -29,7 +29,6 @@ Pause analysis pauses counters; Reset data clears totals. Low-confidence or miss
 - `src/app.js` connects UI events and coordinates a camera session.
 - `src/camera-source.js` owns camera enumeration and stream lifecycle.
 - `src/vision-pipeline.js` initializes MediaPipe and returns pose, hand, and face results.
-- `src/hand-filter.js` smooths wrist and finger landmarks adaptively per enrolled hand identity, once per fresh observation.
 - `src/slip-counter.js` calibrates and counts head slips relative to the shoulders.
 - `src/hand-enrollment.js` recognizes the fist-to-open enrollment gesture and matches only enrolled hands.
 - `src/movement-counter.js` owns angle calculation and repetition state.
@@ -39,6 +38,6 @@ Pause analysis pauses counters; Reset data clears totals. Low-confidence or miss
 
 Each module exposes a small interface; `src/app.js` is the composition layer that passes results between them.
 
-Pose inference is requested every 33 ms on new video frames; hands run at most every 33 ms and face landmarks every 150 ms to prioritize quick arm movements. These are scheduling targets, not guaranteed frame rates. Fully occluded arms and movements between camera frames cannot be measured reliably.
+Pose inference is requested every 33 ms on new video frames; hands run at most every 66 ms and face landmarks every 150 ms to prioritize quick arm movements. These are scheduling targets, not guaranteed frame rates. Fully occluded arms and movements between camera frames cannot be measured reliably.
 
-The camera requests up to 60 FPS at 720p when supported. Hand inference targets 33 ms between observations. All 21 hand points use adaptive smoothing: stronger when nearly still, lighter during fast movements. The same filtered observations drive the overlay and hand counters. This reduces jitter but cannot recover fingertips hidden from the camera.
+The hand overlay uses current detector landmarks without additional smoothing. Hand inference runs every 66 ms to preserve pose responsiveness. The Head slips counter has a dedicated card at the top of the sidebar.
