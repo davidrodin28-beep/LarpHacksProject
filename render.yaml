@@ -19,3 +19,11 @@ services:
         sync: false   # build.nvidia.com key for the "best" engine (Nemotron 3 Ultra)
       - key: SPORTGEN_FAST_API_KEY
         sync: false   # optional second key for the "fast" engine (Nemotron 3.5 Lightning)
+      - key: SPORTGEN_CORS_ORIGINS
+        value: https://larphacksproject.onrender.com,http://localhost:8000,http://127.0.0.1:8000
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: ELEVENLABS_VOICE_ID
+        value: JBFqnCBsd6RMkjVDRZzb
+      - key: ELEVENLABS_MODEL_ID
+        value: eleven_flash_v2_5

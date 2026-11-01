@@ -23,8 +23,10 @@ from pydantic import BaseModel
 from .config import settings
 from .generator import generate, remix
 from .models import TRIGGER_COUNTERS, Constraints, Sport, SportResult, Trigger
+from .speech import router as speech_router
 
 app = FastAPI(title="sportgen", version="0.2.0")
+app.include_router(speech_router)
 app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins.split(","), allow_methods=["*"],
                    allow_headers=["*"])
 

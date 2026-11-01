@@ -4,6 +4,8 @@ import { createRoot } from 'https://esm.sh/react-dom@19.2.0/client';
 import htm from 'https://esm.sh/htm@3.1.1';
 import { createMotionTracker } from './tracking/createMotionTracker.js';
 import { lessons } from './coaching/lessons.js';
+import { useNarration } from './coaching/use-narration.js';
+import { coachingNarration, lessonInstructions, sportInstructions } from './coaching/narration.js';
 import { SportInventor, LiveRound, fetchTriggers } from './sport-inventor.js';
 const html = htm.bind(React.createElement);
 const sports = { Basketball: 'Show us your best free throw.', Boxing: 'Give us your best shadowboxing impression.', Tennis: 'An imaginary racket. A championship serve.', Archery: 'Draw your imaginary bow. Find your target.', 'Table tennis': 'Make that imaginary rally look dramatic.', Volleyball: 'Set up the imaginary winning point.' };
@@ -31,6 +33,14 @@ function Studio() {
   const loading = tracking.phase === 'loading';
   const lesson = (lessons[sport] || lessons.Basketball)[lessonIndex] || (lessons[sport] || lessons.Basketball)[0];
   const coaching = tracking.coaching || { phase: 'ready', step: 0, progress: 0 };
+  const guest = document.getElementById('root').dataset.guestMode === 'true';
+  const voice = useNarration();
+  const voiceCue = custom ? '' : coachingNarration(lesson, coaching, tracking.phase, tracking.paused);
+  useEffect(() => {
+    if (voice.enabled && voiceCue) void voice.speak(voiceCue);
+    else voice.stop();
+    // Only meaningful checkpoint/phase changes narrate, never frame-by-frame progress.
+  }, [voice.enabled, voiceCue, sport, lessonIndex, stance, custom, tracking.phase, tracking.paused, voice.speak, voice.stop]);
 
   function chooseLesson(nextSport, index = 0) {
     setSport(nextSport);
@@ -54,6 +64,8 @@ function Studio() {
       video: video.current,
       canvas: canvas.current,
       stage: stage.current,
+      initialSport: sport,
+      initialLessonIndex: lessonIndex,
       onStatus: status => { if (mounted) setTracking(status); },
       onError: error => { if (mounted) showError(error); },
     });
@@ -94,8 +106,8 @@ function Studio() {
       <div className="trainer-guide"><span><b>1</b> Frame your upper body</span><span><b>2</b> Show both hands</span><span><b>3</b> Punch, then return to guard</span></div>
       <div className="trainer-stats" aria-label="Session counts">
         <div><span>Arm extensions</span><strong>${tracking.metrics?.counts?.arms ?? 0}</strong><small>One count per extension</small></div>
-        <div><span>Lead jabs</span><strong>${tracking.metrics?.counts?.jabs ?? 0}</strong><small>Left lead stance</small></div>
-        <div><span>Rear crosses</span><strong>${tracking.metrics?.counts?.crosses ?? 0}</strong><small>Right rear hand</small></div>
+        <div><span>Lead jabs</span><strong>${tracking.metrics?.counts?.jabs ?? 0}</strong><small>${stance === 'Southpaw' ? 'Right' : 'Left'} lead stance</small></div>
+        <div><span>Rear crosses</span><strong>${tracking.metrics?.counts?.crosses ?? 0}</strong><small>${stance === 'Southpaw' ? 'Left' : 'Right'} rear hand</small></div>
         <div><span>1–2 combinations</span><strong>${tracking.metrics?.counts?.combos ?? 0}</strong><small>Jab followed by cross</small></div>
       </div>
       <div className="camera-slot">
@@ -155,6 +167,12 @@ function Studio() {
       </div>
       <div className="studio-bottom">
         <div className="session-summary">
+          <div className="voice-controls" aria-label="Spoken instructions">
+            <button type="button" disabled=${guest} aria-pressed=${voice.enabled} onClick=${voice.toggle}>${voice.enabled ? 'Voice on · mute' : 'Enable voice'}</button>
+            <button type="button" disabled=${!voice.enabled || tracking.paused} onClick=${() => voice.speak(custom ? sportInstructions(custom) : lessonInstructions(lesson))}>Read instructions</button>
+            <button type="button" disabled=${!voice.status} onClick=${voice.stop}>Stop voice</button>
+          </div>
+          <p className="voice-status" role="status" aria-live="polite">${guest ? html`<a href="/login.html">Log in</a> to use spoken instructions. Camera practice is available as a guest.` : voice.status || (voice.enabled ? 'Spoken instructions by ElevenLabs' : 'Turn on voice to hear the instructions.')}</p>
           ${custom ? html`<p><strong>${custom.name}.</strong> ${custom.tagline}</p>
           <p className="extension-count">Arm extensions: <output aria-label="Arm extensions">${tracking.metrics?.counts?.arms ?? 0}</output></p>` : html`
           <div className="coach-heading"><span className="workspace-label">Your coach</span><span className="coach-level">Basics</span></div>
@@ -203,8 +221,9 @@ function Studio() {
       <p className="message" role="status">${message}</p>
     </section>
     <section className="panels">
-      ${inventing && html`<${SportInventor} disabled=${false} onPlay=${s => { setCustom(s); setInventing(false); }}/>`}
+      ${inventing && html`<${SportInventor} disabled=${false} onRead=${voice.enabled ? s => voice.speak(sportInstructions(s)) : undefined} onPlay=${s => { setCustom(s); setInventing(false); }}/>`}
       ${custom && html`<${LiveRound} sport=${custom} triggers=${triggers || {}} counts=${tracking.metrics?.counts} cameraOn=${tracking.phase === "tracking"}
+          onRead=${voice.enabled ? () => voice.speak(sportInstructions(custom)) : undefined}
           onExit=${() => { setCustom(null); setInventing(true); }}/>`}
     </section>
     </div>

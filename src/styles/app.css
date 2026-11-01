@@ -937,6 +937,11 @@ footer {
 .form-tips summary { color: var(--ink); }
 .session-summary .form-tips p { font-size: 12px; margin-top: 8px; }
 .session-summary .extension-count { border-top: 1px solid var(--line); padding-top: 12px; font-size: 12px; }
+.voice-controls { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.voice-controls button { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 12px; background: var(--bg); color: var(--ink); }
+.voice-controls button[aria-pressed=true] { background: var(--sage); border-color: #688c35; }
+.voice-controls button:disabled { opacity: .5; cursor: not-allowed; }
+.session-summary .voice-status { font-size: 12px; line-height: 1.5; color: var(--muted); margin: 0 0 14px; }
 @media (max-width: 700px) and (min-height: 501px) {
   .studio { overflow-y: auto; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto auto; }
   .camera-slot { height: clamp(220px, 62vw, 390px); }

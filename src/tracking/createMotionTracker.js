@@ -9,7 +9,7 @@ import { CoachSession } from '../coaching/coach.js';
 
 // Integration boundary: UI supplies elements and receives low-frequency status updates.
 // Detection, enrollment, drawing, motion measurement, and counting use the team's modules.
-export function createMotionTracker({ video, canvas, stage, onStatus, onError }, dependencies = {}) {
+export function createMotionTracker({ video, canvas, stage, onStatus, onError, initialSport = 'Basketball', initialLessonIndex = 0 }, dependencies = {}) {
   const Camera = dependencies.CameraSource || CameraSource;
   const Vision = dependencies.VisionPipeline || VisionPipeline;
   const Enrollment = dependencies.HandEnrollment || HandEnrollment;
@@ -22,6 +22,7 @@ export function createMotionTracker({ video, canvas, stage, onStatus, onError },
   const motion = new Meter();
   const counter = new Counter();
   const coach = new CoachSession();
+  coach.select(initialSport, initialLessonIndex);
   let session = null;
   let frame = 0;
   let mirrored = true;
@@ -187,6 +188,8 @@ export function createMotionTracker({ video, canvas, stage, onStatus, onError },
     },
     setCoachingStance(stance) {
       coach.setStance(stance);
+      counter.combo.setLead(stance === 'Southpaw' ? 'Right' : 'Left');
+      counter.resetGesture();
       if (session?.ready) publish();
     },
     startLesson() {
