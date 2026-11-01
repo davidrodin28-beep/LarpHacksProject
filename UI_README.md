@@ -1,10 +1,8 @@
 # Stillwatch UI
 
-From this repository, install dependencies with `.venv/bin/python -m pip install -r requirements.txt`, then run `.venv/bin/python server.py` and open http://localhost:8000. See README.md for virtual environment setup and Windows commands.
+Build with `python3 scripts/build_static.py` after setting `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`, then serve with `python3 -m http.server 8000 --directory dist`. See README.md for Supabase and Render Static Site configuration.
 
-Login, signup, and logout require this Flask server. Do not use `python -m http.server` or an editor’s static preview: those cannot handle POST requests and return HTTP 501. If port 8000 is occupied by a static server, stop it with Ctrl+C in its terminal before starting Flask. Use `PORT=8002 .venv/bin/python server.py` on macOS/Linux to run Flask on another port.
-
-React and HTM load from esm.sh; MediaPipe and its models load from the URLs in `src/config.js`. Internet access is required. Frames are processed locally; no API keys are needed.
+Login, signup, and logout call Supabase directly from the browser. There is no Flask server. React, HTM, and Supabase JS load from esm.sh; MediaPipe models load from the URLs in `src/config.js`. Video stays local. Supabase configuration uses a public publishable key.
 
 ## Ownership
 
@@ -19,4 +17,4 @@ Start opens the workspace without requesting camera permission. Enable camera op
 
 Movement counts and motion metrics continue inside the adapter; they are not displayed in a dashboard. Session duration includes time paused. The default motion change threshold is 32.
 
-The teammate's original interface is preserved in `tracker.html` and uses `src/app.js`; it is not exposed by the authenticated Flask server. Do not load that entry script on the React page. The UI entry is named `StillwatchUI.js` to avoid a case-only filename collision with `app.js`.
+The teammate's original interface is preserved in `tracker.html` and uses `src/app.js`; it is excluded from the published static build. Do not load that entry script on the React page. The UI entry is named `StillwatchUI.js` to avoid a case-only filename collision with `app.js`.

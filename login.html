@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8f3">
+  <title>Log in — Stillwatch</title>
+  <link rel="stylesheet" href="/src/styles/app.css">
+  <link rel="stylesheet" href="/src/styles/auth.css">
+</head>
+<body class="auth-body" data-auth-mode="login">
+  <div class="shell auth-shell">
+  <header><a class="brand" href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M8 3H4v4m12-4h4v4M4 16v4h4m12-4v4h-4M8 9h1m6 0h1m-8 5q4 5 8 0"/></svg>stillwatch</a><span class="tagline">Play someone else.</span></header>
+  <main class="auth-layout">
+    <section class="auth-intro">
+      <div class="kicker">Your next alter ego</div>
+      <h1>Play the <em>part.</em></h1>
+      <p>Pick a sport. Step into frame.<br>See what you can pull off.</p>
+      <div class="auth-note"><span aria-hidden="true">↗</span> Same you. Different game.</div>
+    </section>
+    <section class="auth-card" aria-labelledby="auth-title">
+      <div class="kicker">Welcome back</div>
+      <h2 id="auth-title">Log in to Stillwatch</h2>
+      <p>Your next session starts here.</p>
+      
+      <form id="auth-form" class="auth-form">
+        <div id="auth-message" role="status" aria-live="polite" hidden></div>
+        
+        <label for="email">Email address</label><input id="email" type="email" name="email" autocomplete="email" maxlength="254" value="" placeholder="you@example.com" required>
+        <label for="password">Password</label><input id="password" type="password" name="password" autocomplete="current-password"  maxlength="128" required>
+        
+        <button class="primary auth-submit" type="submit" disabled>Log in <span aria-hidden="true">↗</span></button>
+      </form>
+      <p class="auth-switch">New to Stillwatch? <a href="/signup.html">Create an account</a></p>
+    </section>
+  </main>
+  <footer><span>♧ Video stays on your device.</span><span>Pick a sport. Play the part.</span></footer>
+  </div>
+  <noscript>JavaScript is required to sign in.</noscript>
+  <script type="module" src="/src/auth/form.js"></script>
+</body>
+</html>

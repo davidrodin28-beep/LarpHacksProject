@@ -9,9 +9,9 @@
     <link rel="stylesheet" href="/src/styles/account.css">
   </head>
   <body>
-    <div id="root" data-account-name="{{ g.user.name }}" data-csrf-token="{{ session.csrf_token }}">
+    <div id="root"><p class="auth-loading" role="status">Loading your session…</p>
     </div>
-    <script type="module" src="/src/StillwatchUI.js">
+    <script type="module" src="/src/auth/start-app.js">
     </script>
   </body>
 </html>

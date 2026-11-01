@@ -2,62 +2,59 @@
 
 A small browser app that detects movement and tracks the head, shoulders, elbows, wrists, and hand(s) you select. Pose tracking draws both arms from shoulder through elbow to wrist, with enrolled arms emphasized. At camera startup, make a fist and open each hand you want enrolled, then wait for automatic selection to finish. Hand skeletons for hands that do not complete the gesture are ignored. Hand tracking follows the wrist and finger joints, helping preserve the arm trace when a hand turns or the person turns sideways. Head position uses face landmarks around the nose, eyes, and mouth. Camera frames are processed in the browser and are not uploaded or recorded.
 
-## Run it
+## Supabase accounts and static hosting
 
-Python 3.11+ is required. Create a virtual environment and install the backend:
+Stillwatch is a static app. Supabase Auth handles signup, email confirmation, login, token refresh, and logout. Render only serves the UI; Flask and SQLite are no longer used. Existing local SQLite accounts are not migrated—users must sign up again. Camera frames remain on the device.
 
-```sh
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python server.py
-```
+### Configure Supabase
 
-On Windows, use `py -m venv .venv` and `.venv\Scripts\Activate.ps1` in PowerShell instead of the first two commands.
+1. Create a free Supabase project. Keep email/password authentication enabled.
+2. Under **Authentication → URL Configuration**, set Site URL to `https://larphacksproject.onrender.com` and add these redirect URLs:
+   - `https://larphacksproject.onrender.com/login.html`
+   - `http://localhost:8000/login.html`
+3. Copy the project URL and **publishable** key from the project's Connect dialog or API settings. Never use a secret or service-role key in the browser.
+4. Keep email confirmation enabled. For public signups, configure custom SMTP: Supabase's default email sender is limited to authorized organization addresses and is for development. See [Supabase email setup](https://supabase.com/docs/guides/auth/auth-smtp).
 
-Open [http://localhost:8000](http://localhost:8000), create an account, then choose **Start**, followed by **Enable camera**. Use the Flask server, rather than `python -m http.server`: login and signup require the backend. Camera access works on localhost or HTTPS. Allow camera permission when prompted. The browser downloads the MediaPipe models on first use; video processing remains local.
+Accounts are managed in Supabase Authentication → Users. No public application tables are required. If you add saved metrics later, create owner-scoped Row Level Security policies before exposing data. The browser's login gate controls navigation, not access to static assets; database access must always be enforced by Supabase policies.
 
-### Accounts and local storage
+### Changes your friend needs to make in Render
 
-- `/signup` creates an account and signs in; `/login` signs in; the tracker at `/` requires an account. Your name and **Log out** appear in the main UI header. Log out revokes the current session.
-- SQLite is created automatically at `instance/stillwatch.sqlite3`. Accounts persist across server restarts. Each test uses a separate temporary database.
-- Passwords use Werkzeug scrypt hashing. Session tokens expire after seven days and are stored hashed in SQLite. Cookies are HTTP-only and SameSite=Lax; forms use CSRF tokens. Authentication permits ten attempts per email in a rolling 15-minute window.
-- A local signing secret is generated in `instance/secret.key`. Database files and secrets are ignored by Git. Never serve the repository with a generic public file server.
-- Accounts do not yet save movement metrics or video. Email verification and password reset are not implemented.
-
-Run tests:
-
-```sh
-python -m unittest discover -s tests -v
-```
-
-### Render hosting
-
-Run the frontend and authentication together as a **Python Web Service**. A Static Site or `python -m http.server` cannot handle login/logout POST requests.
-
-`render.yaml` provides a Blueprint with a paid Starter service and a 1 GB persistent disk. For an existing service, apply these settings in its Render dashboard; adding a YAML file does not automatically update a manually configured service:
+Keep the existing **Static Site**, connected to the GitHub branch containing this change. Set:
 
 | Setting | Value |
 | --- | --- |
-| Runtime | Python |
-| Build command | `pip install -r requirements.txt` |
-| Start command | `gunicorn --config gunicorn.conf.py wsgi:app` |
-| Health check | `/health` |
-| Instances | 1 |
-| Disk mount path | `/var/data` |
-| `APP_ENV` | `production` |
-| `DATABASE_PATH` | `/var/data/stillwatch.sqlite3` |
-| `SECRET_KEY` | A stable random secret stored in Render environment settings |
+| Build command | `python3 scripts/build_static.py` |
+| Publish directory | `dist` |
+| Environment variable `SUPABASE_URL` | Your Supabase project URL |
+| Environment variable `SUPABASE_PUBLISHABLE_KEY` | Your Supabase publishable key |
 
-Deploy the branch containing `server.py`, `wsgi.py`, `templates/`, and `requirements.txt`. Replace the static-server start command. If the existing resource is a Static Site, create a Python Web Service and use its URL. Flask must serve both the UI and account routes on the same origin.
+Save and redeploy. Do not publish the repository root. The build copies only frontend files and emits `auth-config.json` with public Supabase configuration. Private credentials, `.env`, Git metadata, local databases, and tests stay out of the build. The environment values are public browser configuration, not server secrets.
 
-Gunicorn binds to Render's `PORT` on `0.0.0.0`. Render detection enables Secure cookies and requires a database path and signing secret. The Blueprint generates the secret automatically. For manual setup, generate one with `python -c "import secrets; print(secrets.token_hex(32))"`. Keep it stable across deployments and out of Git.
+Remove any catch-all rewrite to `index.html` if it prevents existing files from being served. Optionally add redirects `/login` → `/login.html` and `/signup` → `/signup.html`; directory entry pages are also generated. Email callbacks use `/login.html`. There is no start command, backend service, persistent disk, or Render payment requirement for this static setup. `render.yaml` documents the equivalent Blueprint configuration; it does not update a manually configured site automatically.
 
-Attach the persistent disk before deployment. SQLite is created on first boot; local accounts are not uploaded. Persistent disks require paid services. Ordinary Render files are ephemeral, so accounts would be lost on restart without persistent storage. Use one service instance with SQLite; migrate to managed PostgreSQL before horizontal scaling.
+After deployment, verify `/auth-config.json` loads, sign up, confirm the email, log in, and log out. GitHub auto-deploy can continue as before. Supabase accounts persist independently of Render deploys.
 
-After deployment, check `/health` for `{"status":"ok"}`, then test signup, logout, and login. Redeploy and verify the account still works. Local development remains `python server.py` with storage in `instance/`.
+### Local development
 
-See [Render’s Flask guide](https://render.com/docs/deploy-flask), [Blueprint reference](https://render.com/docs/blueprint-spec), and [persistent disk documentation](https://render.com/docs/disks).
+Python 3.10+ is enough to build and serve; no Python packages are required. Set the two public configuration variables, then:
+
+```sh
+export SUPABASE_URL="https://YOUR_PROJECT.supabase.co"
+export SUPABASE_PUBLISHABLE_KEY="sb_publishable_YOUR_KEY"
+python3 scripts/build_static.py
+python3 -m http.server 8000 --directory dist
+```
+
+On PowerShell, set variables with `$env:SUPABASE_URL="..."` and `$env:SUPABASE_PUBLISHABLE_KEY="..."`, then use `py` instead of `python3`.
+
+Open http://localhost:8000. Use a separate Supabase development project if you want isolated test accounts. Never serve the repository root. Rebuild after source changes.
+
+Run checks:
+
+```sh
+python3 -m unittest discover -s tests -v
+node --experimental-vm-modules --test tests/auth-flow.test.mjs
+```
 
 Hand setup defaults to Both hands and waits until each completes the fist-to-open gesture. It starts automatically after both are selected and visible for the selection countdown (1.2 seconds since the last enrollment). Choose One hand intentionally when needed. Re-select hands restarts setup without clearing repetition totals.
 
