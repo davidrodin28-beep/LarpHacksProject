@@ -10,9 +10,35 @@ import time
 from datetime import timedelta
 
 from flask import Flask, abort, g, redirect, render_template, request, send_from_directory, session, url_for
+import psycopg
+from psycopg.rows import dict_row
 from werkzeug.security import check_password_hash, generate_password_hash
 
 ROOT = Path(__file__).resolve().parent
+
+
+class PostgresConnection:
+    """Small adapter so the same account queries work on SQLite and Render Postgres."""
+
+    def __init__(self, url):
+        self.connection = psycopg.connect(url, row_factory=dict_row)
+
+    def execute(self, sql, values=()):
+        return self.connection.execute(sql.replace("?", "%s"), values)
+
+    def executescript(self, script):
+        for statement in script.split(";"):
+            if statement.strip():
+                self.connection.execute(statement)
+
+    def commit(self):
+        self.connection.commit()
+
+    def rollback(self):
+        self.connection.rollback()
+
+    def close(self):
+        self.connection.close()
 
 
 def create_app(test_config=None):
@@ -20,6 +46,7 @@ def create_app(test_config=None):
     production = os.environ.get("APP_ENV") == "production"
     app.config.update(
         DATABASE=os.environ.get("DATABASE_PATH", str(ROOT / "instance" / "stillwatch.sqlite3")),
+        DATABASE_URL=os.environ.get("DATABASE_URL"),
         SECRET_KEY=os.environ.get("SECRET_KEY"),
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
@@ -44,9 +71,12 @@ def create_app(test_config=None):
 
     def db():
         if "db" not in g:
-            g.db = sqlite3.connect(app.config["DATABASE"], timeout=10)
-            g.db.row_factory = sqlite3.Row
-            g.db.execute("PRAGMA foreign_keys = ON")
+            if app.config["DATABASE_URL"]:
+                g.db = PostgresConnection(app.config["DATABASE_URL"])
+            else:
+                g.db = sqlite3.connect(app.config["DATABASE"], timeout=10)
+                g.db.row_factory = sqlite3.Row
+                g.db.execute("PRAGMA foreign_keys = ON")
         return g.db
 
     @app.teardown_appcontext
@@ -59,7 +89,7 @@ def create_app(test_config=None):
     with app.app_context():
         db().executescript("""
             CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY,
+                id {id_type} PRIMARY KEY,
                 name TEXT NOT NULL,
                 email TEXT NOT NULL UNIQUE,
                 password_hash TEXT NOT NULL,
@@ -67,7 +97,7 @@ def create_app(test_config=None):
             );
             CREATE TABLE IF NOT EXISTS sessions (
                 token_hash TEXT PRIMARY KEY,
-                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                user_id {user_id_type} NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                 expires_at INTEGER NOT NULL
             );
             CREATE TABLE IF NOT EXISTS auth_attempts (
@@ -75,7 +105,11 @@ def create_app(test_config=None):
                 attempted_at INTEGER NOT NULL
             );
             CREATE INDEX IF NOT EXISTS attempts_email_time ON auth_attempts(email, attempted_at);
-        """)
+        """.format(
+            id_type="BIGSERIAL" if app.config["DATABASE_URL"] else "INTEGER",
+            user_id_type="BIGINT" if app.config["DATABASE_URL"] else "INTEGER",
+        ))
+        db().commit()
 
     dummy_hash = generate_password_hash(secrets.token_hex(32))
 
@@ -135,7 +169,7 @@ def create_app(test_config=None):
             now = int(time.time())
             connection = db()
             connection.execute("DELETE FROM auth_attempts WHERE attempted_at < ?", (now - 900,))
-            attempts = connection.execute("SELECT count(*) FROM auth_attempts WHERE email = ?", (email,)).fetchone()[0]
+            attempts = connection.execute("SELECT count(*) AS attempt_count FROM auth_attempts WHERE email = ?", (email,)).fetchone()["attempt_count"]
             if attempts >= 10:
                 connection.commit()
                 error, status = "Too many attempts. Please try again in 15 minutes.", 429
@@ -152,14 +186,18 @@ def create_app(test_config=None):
                     error = "Your passwords do not match."
                 elif signup:
                     try:
+                        insert_sql = "INSERT INTO users (name,email,password_hash,created_at) VALUES (?,?,?,?)"
+                        if app.config["DATABASE_URL"]:
+                            insert_sql += " RETURNING id"
                         cursor = connection.execute(
-                            "INSERT INTO users (name,email,password_hash,created_at) VALUES (?,?,?,?)",
+                            insert_sql,
                             (name, email, generate_password_hash(password), now),
                         )
                         connection.commit()
-                        start_session(cursor.lastrowid)
+                        new_user_id = cursor.fetchone()["id"] if app.config["DATABASE_URL"] else cursor.lastrowid
+                        start_session(new_user_id)
                         return redirect(url_for("tracker"), code=303)
-                    except sqlite3.IntegrityError:
+                    except (sqlite3.IntegrityError, psycopg.IntegrityError):
                         connection.rollback()
                         error = "Unable to create an account with that email. Try signing in."
                 else:

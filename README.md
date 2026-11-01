@@ -47,14 +47,15 @@ Pause analysis pauses counters; Reset data clears totals. Low-confidence or miss
 
 ## Render deployment
 
-This account-enabled app needs a Python **Web Service**, not a Static Site. Use the GitHub branch containing this version, set the build command to `pip install -r requirements.txt`, and the start command to `gunicorn 'server:create_app()' --bind 0.0.0.0:$PORT --workers 1`. Set `APP_ENV=production` and a long random `SECRET_KEY`; `/health` is the health check path. For accounts to survive restarts, configure `DATABASE_PATH` to persistent storage. SQLite on Render needs a paid persistent disk mounted at `/var/data`, with `DATABASE_PATH=/var/data/stillwatch.sqlite3`. Free web services lose local files on restarts and spin-down, and cannot use persistent disks. Free Render Postgres databases expire after 30 days. Do not use free service local SQLite for real accounts.
+This account-enabled app needs a Python **Web Service**, not a Static Site. The included `render.yaml` defines a free Web Service and a free Postgres database; connect the GitHub repo to Render and create a Blueprint from this file. Free Postgres expires 30 days after creation, so this configuration is for a demo, not long-term accounts. Before the expiry date, upgrade the database to a paid plan or export/migrate the data. Render free web services may sleep after inactivity. The existing static service can remain online separately. To use persistent SQLite instead, a paid web service needs a persistent disk mounted at `/var/data` and `DATABASE_PATH=/var/data/stillwatch.sqlite3`.
 
 ## Code layout
 
-- `index.html` loads the app shell.
-- `src/styles/app.css` contains the interface styling.
-- `src/StillwatchUI.js` renders the introduction, sport selector, live stats, and camera studio.
-- `src/tracking/createMotionTracker.js` coordinates camera, inference, hand setup, counters, and sport estimates.
+- `server.py` handles signup, login, logout, sessions, and authenticated delivery of the tracker.
+- `templates/auth.html` and `src/styles/auth.css` render login/signup and the sport/stat information.
+- `index.html` loads the motion tracker interface; `styles.css` contains its styling.
+- `src/app.js` coordinates camera, inference, hand setup, counters, and sport estimates.
+- `src/tracking/createMotionTracker.js` coordinates camera inference, hand setup, counters, and sports estimates.
 - `src/camera-source.js` owns camera enumeration and stream lifecycle.
 - `src/vision-pipeline.js` initializes MediaPipe and returns pose, hand, and face results.
 - `src/slip-counter.js` calibrates and counts head slips relative to the shoulders.

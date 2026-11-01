@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: stillwatch-motion-login
+    runtime: python
+    plan: free
+    region: ohio
+    branch: DBranch
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn 'server:create_app()' --bind 0.0.0.0:$PORT --workers 1
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: stillwatch-accounts
+          property: connectionString
+
+databases:
+  - name: stillwatch-accounts
+    databaseName: stillwatch
+    user: stillwatch
+    plan: free
+    region: ohio
