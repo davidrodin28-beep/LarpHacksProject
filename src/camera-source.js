@@ -44,8 +44,8 @@ export class CameraSource {
     this.stop();
     const deviceId = this.selector.value;
     const video = deviceId
-      ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
-      : { width: { ideal: 1280 }, height: { ideal: 720 } };
+      ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 60, max: 60 } }
+      : { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 60, max: 60 } };
     this.stream = await navigator.mediaDevices.getUserMedia({ audio: false, video });
     this.video.srcObject = this.stream;
     await this.video.play();

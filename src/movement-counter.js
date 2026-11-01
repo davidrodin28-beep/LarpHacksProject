@@ -1,3 +1,4 @@
+import { SlipCounter } from './slip-counter.js';
 export function jointAngle(a, b, c, aspect = 1) {
   const u = [(a.x-b.x)*aspect, a.y-b.y];
   const v = [(c.x-b.x)*aspect, c.y-b.y];
@@ -29,10 +30,12 @@ const distance = (a,b,aspect) => Math.hypot((a.x-b.x)*aspect,a.y-b.y);
 export class MovementCounter {
   constructor() { this.reset(); }
   reset() {
-    this.counts = { arms: 0, opens: 0, closes: 0, tilts: 0 };
+    this.counts = { arms: 0, opens: 0, closes: 0, tilts: 0, slips: 0 };
+    this.slip = new SlipCounter();
     this.resetGesture();
   }
   resetGesture() {
+    this.slip?.resetGesture();
     this.states = new Map();
     this.angles = {};
     this.reaches = {};
@@ -113,6 +116,7 @@ export class MovementCounter {
         if (before && after !== 'neutral' && before !== after) this.counts.tilts++;
       });
     } else this.states.delete('neck');
+    this.counts.slips = this.slip.sample(pose,now,aspect);
     const angles = Object.entries(this.angles).map(([side,a])=>`${side}: ${a}° · ${this.reaches[side].percent}% reach (${this.reaches[side].mode})`).join(' · ');
     this.status = angles || 'Keep shoulders, elbows and wrists visible';
     return this.counts;

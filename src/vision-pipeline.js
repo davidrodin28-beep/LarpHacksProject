@@ -62,7 +62,7 @@ export class VisionPipeline {
   detect(video, timestamp) {
     if (!this.ready) throw new Error('Vision models are not initialized.');
     const pose = this.pose.detectForVideo(video, timestamp);
-    if (timestamp - this.lastHandsAt >= 66) {
+    if (timestamp - this.lastHandsAt >= 33) {
       this.cachedHands = this.hands.detectForVideo(video, timestamp);
       this.lastHandsAt = timestamp;
     }

@@ -102,7 +102,7 @@ export class HandEnrollment {
   confirm() {
     this.targets = this.tracks
       .filter((track) => track.selected)
-      .map(({ side, x, y }) => ({ side, x, y }));
+      .map(({ id, side, x, y }) => ({ id, side, x, y }));
     if (this.targets.length) this.calibrating = false;
     return this.targets.length > 0;
   }
@@ -149,7 +149,7 @@ export class HandEnrollment {
       const [hand] = remaining.splice(bestIndex, 1);
       target.x = target.x * 0.35 + hand.x * 0.65;
       target.y = target.y * 0.35 + hand.y * 0.65;
-      matched.push(hand);
+      matched.push({...hand,trackId:target.id});
     }
 
     if (!matched.length) return [];
