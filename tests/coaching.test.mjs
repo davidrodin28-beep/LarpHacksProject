@@ -16,6 +16,63 @@ const module = await load(new URL('../src/coaching/coach.js', import.meta.url));
 await module.evaluate();
 const { CoachSession, checkPosition } = module.namespace;
 const { lessons } = modules.get(new URL('../src/coaching/lessons.js', import.meta.url).href).namespace;
+const { armGeometry, MovementCounter } = modules.get(new URL('../src/movement-counter.js', import.meta.url).href).namespace;
+
+function armAtAngle(degrees) {
+  const angle = degrees * Math.PI / 180;
+  return [
+    { x: .4, y: .5, z: 0, visibility: .99 },
+    { x: .3, y: .5, z: 0, visibility: .99 },
+    { x: .3 + .1 * Math.cos(angle), y: .5 - .1 * Math.sin(angle), z: 0, visibility: .99 },
+  ];
+}
+
+test('arm extensions accept 125 degrees without the former reach restriction', () => {
+  const geometry = armGeometry(...armAtAngle(125));
+  assert.ok(geometry.reach < .96);
+  assert.equal(geometry.state, 'straight');
+  assert.equal(armGeometry(...armAtAngle(124)).state, null);
+  assert.equal(armGeometry(...armAtAngle(119)).state, 'bent');
+});
+
+test('125 degree extensions count once per bend in both 3D and 2D', () => {
+  for (const world of [true, false]) {
+    const counter = new MovementCounter();
+    let now = 0;
+    function sample(degrees) {
+      const p = [];
+      [p[11], p[13], p[15]] = armAtAngle(degrees);
+      const result = { landmarks: [p], ...(world ? { worldLandmarks: [p] } : {}) };
+      // The image-only fallback requires two confirming samples.
+      for (let i = 0; i < 2; i++) counter.sample(result, [], now += 33);
+    }
+    sample(100);
+    sample(124);
+    assert.equal(counter.counts.arms, 0);
+    sample(125);
+    assert.equal(counter.counts.arms, 1);
+    assert.equal(counter.counts.jabs, 1);
+    sample(130);
+    sample(125);
+    assert.equal(counter.counts.arms, 1);
+    assert.equal(counter.counts.jabs, 1);
+    sample(100);
+    sample(125);
+    assert.equal(counter.counts.arms, 2);
+    assert.equal(counter.counts.jabs, 2);
+  }
+});
+
+test('guided arm extension accepts 125 degrees and rejects 124', () => {
+  for (const [degrees, expected] of [[125, true], [124, false]]) {
+    const sample = pose();
+    const p = sample.landmarks[0];
+    [p[11], p[13], p[15]] = armAtAngle(degrees);
+    [p[12], p[14], p[16]] = armAtAngle(degrees).map(point => ({ ...point, x: 1 - point.x }));
+    assert.equal(checkPosition('extendBoth', sample).matched, expected);
+  }
+});
+
 function pose() {
   const p = Array.from({ length: 33 }, () => ({ x: 0.5, y: 0.5, visibility: 0.99 }));
   p[0] = { x: 0.5, y: 0.2, visibility: 0.99 };

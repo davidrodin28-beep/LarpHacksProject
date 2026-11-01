@@ -1,4 +1,4 @@
-import { jointAngle } from '../movement-counter.js';
+import { isArmExtended, jointAngle } from '../movement-counter.js';
 import { lessons } from './lessons.js';
 
 const visible = p => p && Number.isFinite(p.x) && Number.isFinite(p.y)
@@ -29,16 +29,16 @@ export function checkPosition(goal, poseResult, aspect = 1, stance = 'Orthodox')
     ready: [arms.every(a => a.bent && a.below), 'Bend both elbows and keep your hands in front, below your shoulders.'],
     handsUp: [arms.every(a => a.raised && a.bent), 'Raise both hands above shoulder height and keep your elbows bent.'],
     handsUpSingle: [arms.some(a => a.raised), 'Bring your bat hand above shoulder height.'],
-    reachUp: [arms.some(a => a.overhead && a.angle > 145), 'Reach one hand above your head and lengthen that arm gently.'],
-    extendUp: [arms.every(a => a.overhead && a.angle > 145), 'Reach both hands above your head and lengthen both arms gently.'],
-    extendBoth: [arms.every(a => a.angle > 145 && a.level), 'Lengthen both arms at shoulder height; angle slightly outward so both elbows stay visible.'],
+    reachUp: [arms.some(a => a.overhead && isArmExtended(a.angle)), 'Reach one hand above your head and lengthen that arm gently.'],
+    extendUp: [arms.every(a => a.overhead && isArmExtended(a.angle)), 'Reach both hands above your head and lengthen both arms gently.'],
+    extendBoth: [arms.every(a => isArmExtended(a.angle) && a.level), 'Lengthen both arms at shoulder height; angle slightly outward so both elbows stay visible.'],
     guard: [arms.every(a => a.cheek && a.bent), 'Bring both hands near your cheeks with your elbows bent.'],
-    jab: [arms[punchSide].angle > 145 && arms[punchSide].level && arms[1 - punchSide].cheek && arms[1 - punchSide].bent, `Extend your ${punchSide === 0 ? 'left' : 'right'} lead arm at shoulder height and keep the other hand near your cheek.`],
-    cross: [arms[punchSide].angle > 145 && arms[punchSide].level && arms[1 - punchSide].cheek && arms[1 - punchSide].bent, `Extend your ${punchSide === 0 ? 'left' : 'right'} rear arm at shoulder height and keep the other hand near your cheek.`],
-    sideReach: [arms.some(a => a.sideways && a.level && a.angle > 145), 'Reach one arm sideways at shoulder height with a soft elbow.'],
-    draw: [arms.some((a, i) => a.sideways && a.level && a.angle > 145 && arms[1 - i].cheek && arms[1 - i].bent), 'Keep one arm reaching sideways and bring your other hand near your cheek.'],
+    jab: [isArmExtended(arms[punchSide].angle) && arms[punchSide].level && arms[1 - punchSide].cheek && arms[1 - punchSide].bent, `Extend your ${punchSide === 0 ? 'left' : 'right'} lead arm at shoulder height and keep the other hand near your cheek.`],
+    cross: [isArmExtended(arms[punchSide].angle) && arms[punchSide].level && arms[1 - punchSide].cheek && arms[1 - punchSide].bent, `Extend your ${punchSide === 0 ? 'left' : 'right'} rear arm at shoulder height and keep the other hand near your cheek.`],
+    sideReach: [arms.some(a => a.sideways && a.level && isArmExtended(a.angle)), 'Reach one arm sideways at shoulder height with a soft elbow.'],
+    draw: [arms.some((a, i) => a.sideways && a.level && isArmExtended(a.angle) && arms[1 - i].cheek && arms[1 - i].bent), 'Keep one arm reaching sideways and bring your other hand near your cheek.'],
     relax: [arms.every(a => a.down), 'Lower both hands below your elbows and relax your shoulders.'],
-    platform: [arms.every(a => a.angle > 145 && a.below) && Math.hypot((p[15].x - p[16].x) * aspect, p[15].y - p[16].y) < scale * 0.45, 'Bring your hands together below chest height and lengthen both arms.'],
+    platform: [arms.every(a => isArmExtended(a.angle) && a.below) && Math.hypot((p[15].x - p[16].x) * aspect, p[15].y - p[16].y) < scale * 0.45, 'Bring your hands together below chest height and lengthen both arms.'],
   };
   const check = checks[goal];
   return { matched: Boolean(check?.[0]), feedback: check?.[1] || 'Follow the position cue.' };

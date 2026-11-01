@@ -17,7 +17,7 @@ class StaticBuildTests(unittest.TestCase):
             output = build(Path(temp) / 'dist')
             config = json.loads((output / 'auth-config.json').read_text())
             self.assertEqual(set(config), {'supabaseUrl', 'supabasePublishableKey'})
-            for path in ('index.html', 'login.html', 'signup.html', 'login/index.html', 'src/auth/client.js', 'src/StillwatchUI.js', 'src/coaching/coach.js', 'src/coaching/lessons.js'):
+            for path in ('index.html', 'login.html', 'signup.html', 'login/index.html', 'forgot-password.html', 'reset-password.html', 'forgot-password/index.html', 'reset-password/index.html', 'src/auth/client.js', 'src/StillwatchUI.js', 'src/coaching/coach.js', 'src/coaching/lessons.js'):
                 self.assertTrue((output / path).is_file(), path)
             for path in ('server.py', 'instance', '.git', 'tests', 'templates', '.env'):
                 self.assertFalse((output / path).exists(), path)

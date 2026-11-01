@@ -26,7 +26,7 @@ def build(destination=None):
     if output.exists():
         shutil.rmtree(output)
     output.mkdir(parents=True)
-    for name in ('index.html', 'login.html', 'signup.html'):
+    for name in ('index.html', 'login.html', 'signup.html', 'forgot-password.html', 'reset-password.html'):
         shutil.copy2(ROOT / name, output / name)
     # The AI sport engine lives on a separate Render service; the page reads its URL from a meta tag.
     api = os.environ.get('SPORTGEN_API_URL', '').strip().rstrip('/')
@@ -45,7 +45,7 @@ def build(destination=None):
         'supabaseUrl': url, 'supabasePublishableKey': key,
     }) + '\n')
     # Directory routes also work with a plain local static file server.
-    for route in ('login', 'signup'):
+    for route in ('login', 'signup', 'forgot-password', 'reset-password'):
         (output / route).mkdir()
         shutil.copy2(output / f'{route}.html', output / route / 'index.html')
     return output

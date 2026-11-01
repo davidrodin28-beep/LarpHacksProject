@@ -26,6 +26,7 @@ Project: **Stillwatch** (`rkzwufzosvuonroiwnwx`)
 
 - Site URL: `https://larphacksproject.onrender.com`
 - Allowed redirects: `https://larphacksproject.onrender.com/login.html` and `http://localhost:8000/login.html`
+- Also allow password recovery redirects: `https://larphacksproject.onrender.com/reset-password.html` and `http://localhost:8000/reset-password.html`. Keep the recovery email link as `{{ .ConfirmationURL }}`.
 - Email/password authentication is used. Keep email confirmation enabled.
 - Configure custom SMTP in Supabase before accepting public signups. The built-in sender is intended for testing with authorized team addresses. SMTP credentials belong only in Supabase, never the frontend or GitHub.
 
@@ -35,5 +36,6 @@ Project: **Stillwatch** (`rkzwufzosvuonroiwnwx`)
 2. Visit `/signup.html`, create an account with an email you control, and open the confirmation link in the same browser (PKCE).
 3. Log in, confirm the current Stillwatch UI appears, then log out.
 4. Refresh `/` while logged out: it should return you to login.
+5. Choose **Forgot password?**, request a reset email, and open it in the same browser. Set a new password, then confirm the new password logs in and the old one fails. Also verify an expired link offers a new reset request.
 
 Existing local SQLite accounts are not migrated. Users create new Supabase accounts. Camera frames and session movement metrics still remain on the device.

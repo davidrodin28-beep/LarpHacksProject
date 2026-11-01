@@ -1,5 +1,11 @@
 import { ComboCounter } from './combo-counter.js';
 import { SlipCounter } from './slip-counter.js';
+
+export const ARM_EXTENSION_ANGLE = 125;
+export function isArmExtended(angle) {
+  // Allow only numerical rounding at the inclusive 125-degree boundary.
+  return Number.isFinite(angle) && angle >= ARM_EXTENSION_ANGLE - 1e-9;
+}
 export function jointAngle(a, b, c, aspect = 1) {
   const u = [(a.x-b.x)*aspect, a.y-b.y];
   const v = [(c.x-b.x)*aspect, c.y-b.y];
@@ -22,7 +28,7 @@ export function armGeometry(shoulder, elbow, wrist) {
   if (Math.min(upper,lower) < 1e-5 || Math.max(upper,lower)/Math.min(upper,lower) > 3) return null;
   const angle = worldJointAngle(shoulder,elbow,wrist);
   const reach = length(shoulder,wrist)/(upper+lower);
-  return { angle, reach, state: angle >= 150 && reach >= 0.96 ? 'straight'
+  return { angle, reach, state: isArmExtended(angle) ? 'straight'
     : angle <= 120 && reach <= 0.9 ? 'bent' : null };
 }
 const valid = p => p && Number.isFinite(p.x) && Number.isFinite(p.y) && (p.visibility ?? 1) >= 0.65;
@@ -92,7 +98,8 @@ export class MovementCounter {
       this.transition(key,state,now,(before,after)=>{
         if (before === 'bent' && after === 'straight') this.counts.arms++;
       }, hasWorld && confidence >= 0.65 ? 1 : 2);
-      const punchState = angle <= 135 && reach < 0.93 ? 'bent' : state === 'straight' ? 'straight' : null;
+      // Use the same bend/extension gap so a held extension cannot rearm a punch.
+      const punchState = state;
       if (punchState === 'bent') this.punchBentAt.set(side, now);
       this.transition('punch'+side, punchState, now, (before,after)=>{
         if (before === 'bent' && after === 'straight' && now-(this.punchBentAt.get(side) ?? -Infinity) <= 700) punches.push(side);
