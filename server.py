@@ -10,7 +10,6 @@ import time
 from datetime import timedelta
 
 from flask import Flask, abort, g, redirect, render_template, request, send_from_directory, session, url_for
-from authlib.integrations.flask_client import OAuth
 from twilio.rest import Client as TwilioClient
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -100,28 +99,6 @@ def create_app(test_config=None):
         db().execute('CREATE UNIQUE INDEX IF NOT EXISTS users_phone_hash ON users(phone_hash)')
         db().commit()
 
-    oauth = OAuth(app)
-    google_enabled = bool(os.environ.get('GOOGLE_CLIENT_ID') and os.environ.get('GOOGLE_CLIENT_SECRET'))
-    facebook_version = os.environ.get('FACEBOOK_GRAPH_VERSION')
-    facebook_enabled = bool(os.environ.get('FACEBOOK_CLIENT_ID') and os.environ.get('FACEBOOK_CLIENT_SECRET') and facebook_version)
-    if google_enabled:
-        oauth.register(
-            name='google',
-            client_id=os.environ['GOOGLE_CLIENT_ID'],
-            client_secret=os.environ['GOOGLE_CLIENT_SECRET'],
-            server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-            client_kwargs={'scope': 'openid email profile'},
-        )
-    if facebook_enabled:
-        oauth.register(
-            name='facebook',
-            client_id=os.environ['FACEBOOK_CLIENT_ID'],
-            client_secret=os.environ['FACEBOOK_CLIENT_SECRET'],
-            authorize_url=f'https://www.facebook.com/{facebook_version}/dialog/oauth',
-            access_token_url=f'https://graph.facebook.com/{facebook_version}/oauth/access_token',
-            api_base_url=f'https://graph.facebook.com/{facebook_version}/',
-            client_kwargs={'scope': 'email,public_profile'},
-        )
     dummy_hash = generate_password_hash(secrets.token_hex(32))
 
     def token_hash(token):
@@ -149,18 +126,8 @@ def create_app(test_config=None):
         db().commit()
         return user_id
 
-    def external_user(provider, subject, name='Boxing athlete'):
-        linked = db().execute(
-            'SELECT user_id FROM social_identities WHERE provider = ? AND subject = ?', (provider, subject)
-        ).fetchone()
-        if linked:
-            return linked['user_id']
-        return create_external_user(provider, subject, name)
-
     def provider_flags():
         return {
-            'google_enabled': google_enabled,
-            'facebook_enabled': facebook_enabled,
             'phone_enabled': all(os.environ.get(key) for key in ('TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_VERIFY_SERVICE_SID')),
         }
 
@@ -287,50 +254,6 @@ def create_app(test_config=None):
     def guest():
         start_guest_session()
         return redirect(url_for('tracker'), code=303)
-
-    @app.get('/auth/google')
-    def google_login():
-        if not google_enabled:
-            return render_auth_page(error='Google sign-in has not been configured yet.', status=503)
-        return oauth.google.authorize_redirect(url_for('google_callback', _external=True))
-
-    @app.get('/auth/google/callback')
-    def google_callback():
-        if not google_enabled:
-            return render_auth_page(error='Google sign-in has not been configured yet.', status=503)
-        try:
-            token = oauth.google.authorize_access_token()
-            profile = token.get('userinfo') or oauth.google.parse_id_token(token)
-            subject = profile.get('sub')
-            if not subject or not profile.get('email_verified'):
-                return render_auth_page(error='Google did not confirm this account. Please try another sign-in method.', status=400)
-            user_id = external_user('google', subject, profile.get('name') or 'Boxing athlete')
-            start_session(user_id)
-            return redirect(url_for('tracker'), code=303)
-        except Exception:
-            return render_auth_page(error='Google sign-in could not be completed. Please try again.', status=400)
-
-    @app.get('/auth/facebook')
-    def facebook_login():
-        if not facebook_enabled:
-            return render_auth_page(error='Facebook sign-in needs its app credentials and Graph API version.', status=503)
-        return oauth.facebook.authorize_redirect(url_for('facebook_callback', _external=True))
-
-    @app.get('/auth/facebook/callback')
-    def facebook_callback():
-        if not facebook_enabled:
-            return render_auth_page(error='Facebook sign-in has not been configured yet.', status=503)
-        try:
-            oauth.facebook.authorize_access_token()
-            profile = oauth.facebook.get('me', params={'fields': 'id,name,email'}).json()
-            subject = profile.get('id')
-            if not subject:
-                return render_auth_page(error='Facebook did not return an account ID.', status=400)
-            user_id = external_user('facebook', subject, profile.get('name') or 'Boxing athlete')
-            start_session(user_id)
-            return redirect(url_for('tracker'), code=303)
-        except Exception:
-            return render_auth_page(error='Facebook sign-in could not be completed. Please try again.', status=400)
 
     @app.post('/phone/send')
     def phone_send():
