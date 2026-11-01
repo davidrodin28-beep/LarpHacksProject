@@ -6,6 +6,10 @@ export class VisionPipeline {
     this.hands = null;
     this.face = null;
     this.initializing = null;
+    this.lastHandsAt = -Infinity;
+    this.lastFaceAt = -Infinity;
+    this.cachedHands = null;
+    this.cachedFace = null;
   }
 
   get ready() {
@@ -57,11 +61,16 @@ export class VisionPipeline {
 
   detect(video, timestamp) {
     if (!this.ready) throw new Error('Vision models are not initialized.');
-    return {
-      pose: this.pose.detectForVideo(video, timestamp),
-      hands: this.hands.detectForVideo(video, timestamp),
-      face: this.face.detectForVideo(video, timestamp),
-    };
+    const pose = this.pose.detectForVideo(video, timestamp);
+    if (timestamp - this.lastHandsAt >= 66) {
+      this.cachedHands = this.hands.detectForVideo(video, timestamp);
+      this.lastHandsAt = timestamp;
+    }
+    if (timestamp - this.lastFaceAt >= 150) {
+      this.cachedFace = this.face.detectForVideo(video, timestamp);
+      this.lastFaceAt = timestamp;
+    }
+    return { pose, hands: this.cachedHands, face: this.cachedFace };
   }
 
   close() {

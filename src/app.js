@@ -49,6 +49,7 @@ let running = false;
 let paused = false;
 let animationFrame = 0;
 let lastInference = 0;
+let lastVideoTime = -1;
 let sessionStartedAt = 0;
 let toastTimeout = 0;
 let mirrored = true;
@@ -118,8 +119,9 @@ function loop() {
 
   if (!paused) {
     const now = performance.now();
-    if (now - lastInference >= INFERENCE_INTERVAL_MS) {
+    if (now - lastInference >= INFERENCE_INTERVAL_MS && ui.video.currentTime !== lastVideoTime) {
       lastInference = now;
+      lastVideoTime = ui.video.currentTime;
       try {
         results = vision.detect(ui.video, now);
         if (enrollment.calibrating) {
@@ -152,6 +154,7 @@ async function startCamera() {
     running = true;
     paused = false;
     lastInference = 0;
+    lastVideoTime = -1;
     results = { pose: null, hands: null, face: null };
     motion.reset();
     movementCounter.resetGesture();

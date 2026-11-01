@@ -1,4 +1,4 @@
-export const INFERENCE_INTERVAL_MS = 120;
+export const INFERENCE_INTERVAL_MS = 33;
 export const MOTION_FRAME_SIZE = { width: 320, height: 180 };
 export const MOTION_SAMPLE_STEP = 16;
 
