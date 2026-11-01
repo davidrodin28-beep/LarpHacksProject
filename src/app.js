@@ -33,6 +33,14 @@ const ui = {
   opens: $('opensCount'),
   closes: $('closesCount'),
   tilts: $('tiltsCount'),
+  slips: $('slipsCount'),
+  jabs: $('jabsCount'),
+  crosses: $('crossesCount'),
+  combos: $('combosCount'),
+  stance: $('stance'),
+  comboStatus: $('comboStatus'),
+  slipFeedback: $('slipFeedback'),
+  slipStatus: $('slipStatus'),
   movementStatus: $('movementStatus'),
   toast: $('toast'),
 };
@@ -44,6 +52,8 @@ const motion = new MotionMeter();
 const movementCounter = new MovementCounter();
 const renderer = new OverlayRenderer(ui.video, ui.canvas);
 const graphBars = [];
+let handOverlays = [];
+let lastHandObservation = null;
 
 let running = false;
 let paused = false;
@@ -102,7 +112,6 @@ function updateCalibrationStatus() {
 }
 
 function drawFrame() {
-  const handOverlays = enrollment.visibleHands(results.hands, results.pose);
   renderer.render({
     poseResult: results.pose,
     faceResult: results.face,
@@ -124,14 +133,26 @@ function loop() {
       lastVideoTime = ui.video.currentTime;
       try {
         results = vision.detect(ui.video, now);
+        if (results.hands !== lastHandObservation) {
+          lastHandObservation = results.hands;
+          handOverlays = enrollment.visibleHands(results.hands, results.pose);
+        }
         if (enrollment.calibrating) {
           enrollment.observe(results.hands, now);
           updateCalibrationStatus();
         } else {
-          const selectedHands = enrollment.visibleHands(results.hands, results.pose);
+          const selectedHands = handOverlays.filter(hand=>!hand.preview);
+          const previousSlips = Number(ui.slips.textContent);
           const counts = movementCounter.sample(results.pose, selectedHands, now, ui.video.videoWidth / ui.video.videoHeight);
           for (const key of Object.keys(counts)) ui[key].textContent = counts[key];
+          if (counts.slips > previousSlips) {
+            ui.slipFeedback.textContent = `+${counts.slips-previousSlips} slip`;
+            ui.slips.getAnimations().forEach(animation=>animation.cancel());
+            ui.slips.animate([{transform:'scale(1.2)',color:'#fff'},{transform:'scale(1)',color:'#c4f06a'}],{duration:400});
+          }
+          ui.comboStatus.textContent = movementCounter.combo.status;
           ui.movementStatus.textContent = movementCounter.status;
+          ui.slipStatus.textContent = movementCounter.slip.status;
         }
       } catch (error) {
         console.error('Landmark inference failed', error);
@@ -159,6 +180,8 @@ async function startCamera() {
     motion.reset();
     movementCounter.resetGesture();
     ui.movementStatus.textContent = 'Select hands to begin';
+    handOverlays = [];
+    lastHandObservation = null;
     enrollment.begin();
     sessionStartedAt = Date.now();
     renderer.resize(ui.stage);
@@ -196,7 +219,10 @@ function stopCamera() {
   paused = false;
   movementCounter.resetGesture();
   ui.movementStatus.textContent = 'Camera off';
+  ui.slipStatus.textContent = 'Camera off';
   enrollment.reset();
+  handOverlays = [];
+  lastHandObservation = null;
   cancelAnimationFrame(animationFrame);
   camera.stop();
   ui.video.style.display = 'none';
@@ -217,6 +243,7 @@ function togglePause() {
   if (!running || enrollment.calibrating) return;
   paused = !paused;
   ui.movementStatus.textContent = paused ? 'Paused' : 'Counting automatically';
+  ui.slipStatus.textContent = paused ? 'Paused' : 'Face camera; hold head centered briefly';
   movementCounter.resetGesture();
   ui.pauseButton.innerHTML = paused
     ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="m8 5 11 7-11 7z"/></svg>Resume analysis'
@@ -250,9 +277,11 @@ function saveSnapshot() {
 function resetMetrics() {
   motion.reset();
   movementCounter.reset();
-  for (const key of ['arms','opens','closes','tilts']) ui[key].textContent = '0';
+  for (const key of ['arms','opens','closes','tilts','slips','jabs','crosses','combos']) ui[key].textContent = '0';
   updateMetrics({ level: 0, peak: 0, history: Array(45).fill(0) });
   if (running) sessionStartedAt = Date.now();
+  ui.slipFeedback.textContent = '';
+  ui.comboStatus.textContent = movementCounter.combo.status;
   showToast('Session metrics reset');
 }
 
@@ -291,6 +320,7 @@ function finishSetup() {
   ui.pauseButton.disabled = false;
   movementCounter.resetGesture();
   ui.movementStatus.textContent = 'Counting automatically';
+  lastHandObservation = null;
   setCameraStatus(true);
   showToast(`Tracking ${enrollment.targets.length} selected hand${enrollment.targets.length === 1 ? '' : 's'}`);
 }
@@ -302,4 +332,10 @@ $('mirrorBtn').addEventListener('click', () => {
 });
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) motion.resetPreviousFrame?.();
+});
+
+ui.stance.addEventListener('change', () => {
+  movementCounter.combo.setLead(ui.stance.value);
+  movementCounter.resetGesture();
+  ui.comboStatus.textContent = movementCounter.combo.status;
 });
