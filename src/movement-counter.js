@@ -22,8 +22,10 @@ export function armGeometry(shoulder, elbow, wrist) {
   if (Math.min(upper,lower) < 1e-5 || Math.max(upper,lower)/Math.min(upper,lower) > 3) return null;
   const angle = worldJointAngle(shoulder,elbow,wrist);
   const reach = length(shoulder,wrist)/(upper+lower);
-  return { angle, reach, state: angle >= 150 && reach >= 0.96 ? 'straight'
-    : angle <= 120 && reach <= 0.9 ? 'bent' : null };
+  // Allow a natural punch without requiring the elbow to lock out.
+  // Separate bend/extension thresholds keep a held arm from counting twice.
+  return { angle, reach, state: angle >= 125 - 1e-6 && reach >= 0.87 ? 'straight'
+    : angle <= 115 && reach <= 0.86 ? 'bent' : null };
 }
 const valid = p => p && Number.isFinite(p.x) && Number.isFinite(p.y) && (p.visibility ?? 1) >= 0.65;
 const distance = (a,b,aspect) => Math.hypot((a.x-b.x)*aspect,a.y-b.y);
@@ -75,7 +77,7 @@ export class MovementCounter {
       const confidence = Math.min(...joints.map(p=>p?.visibility ?? (p ? 1 : 0)));
       if (confidence < (hasWorld ? 0.35 : 0.65) || !joints.every(p=>p && Number.isFinite(p.x) && Number.isFinite(p.y))) {
         const prior = this.states.get(key);
-        if (prior && now-prior.seen > 250) { this.states.delete(key); this.states.delete('punch'+side); this.punchBentAt.delete(side); }
+        if (prior && now-prior.seen > 400) { this.states.delete(key); this.states.delete('punch'+side); this.punchBentAt.delete(side); }
         continue;
       }
       // Fall back to aspect-corrected image geometry only when world data is absent.
@@ -91,12 +93,12 @@ export class MovementCounter {
       this.reaches[side] = { percent: Math.round(reach*100), mode };
       this.transition(key,state,now,(before,after)=>{
         if (before === 'bent' && after === 'straight') this.counts.arms++;
-      }, hasWorld && confidence >= 0.65 ? 1 : 2);
-      const punchState = angle <= 135 && reach < 0.93 ? 'bent' : state === 'straight' ? 'straight' : null;
+      }, confidence >= 0.55 ? 1 : 2);
+      const punchState = state === 'straight' ? 'straight' : angle <= 115 && reach <= 0.86 ? 'bent' : null;
       if (punchState === 'bent') this.punchBentAt.set(side, now);
       this.transition('punch'+side, punchState, now, (before,after)=>{
         if (before === 'bent' && after === 'straight' && now-(this.punchBentAt.get(side) ?? -Infinity) <= 700) punches.push(side);
-      }, hasWorld && confidence >= 0.65 ? 1 : 2);
+      }, confidence >= 0.55 ? 1 : 2);
       const current = this.states.get(key);
       if (current) current.mode = mode;
     }
