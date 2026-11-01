@@ -4,13 +4,46 @@ A small browser app that detects movement and tracks the head, shoulders, elbows
 
 ## Run it
 
-Camera access works on `localhost` or a secure HTTPS page. From this folder, run:
+Python 3.11+ is required. Create a virtual environment and install the backend:
 
-```powershell
-py -m http.server 8000
+```sh
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python server.py
 ```
 
-Then open [http://localhost:8000](http://localhost:8000) and choose **Start camera**. Allow camera access when your browser asks. On first use, the browser downloads the MediaPipe runtime and pose/hand/face model files; those are used for local processing. Internet access is needed for that first download. Press `Ctrl+C` in the PowerShell window to stop the local server.
+On Windows, use `py -m venv .venv` and `.venv\Scripts\Activate.ps1` in PowerShell instead of the first two commands.
+
+Open [http://localhost:8000](http://localhost:8000), create an account, then choose **Start camera**. Use the Flask server, rather than `python -m http.server`: login and signup require the backend. Camera access works on localhost or HTTPS. Allow camera permission when prompted. The browser downloads the MediaPipe models on first use; video processing remains local.
+
+### Accounts and local storage
+
+- `/signup` creates an account and signs in; `/login` signs in; the tracker at `/` requires an account. Log out revokes the current session.
+- SQLite is created automatically at `instance/stillwatch.sqlite3`. Accounts persist across server restarts. Each test uses a separate temporary database.
+- Passwords use Werkzeug scrypt hashing. Session tokens expire after seven days and are stored hashed in SQLite. Cookies are HTTP-only and SameSite=Lax; forms use CSRF tokens. Authentication permits ten attempts per email in a rolling 15-minute window.
+- A local signing secret is generated in `instance/secret.key`. Database files and secrets are ignored by Git. Never serve the repository with a generic public file server.
+- Accounts do not yet save movement metrics or video. Email verification and password reset are not implemented.
+
+Run tests:
+
+```sh
+python -m unittest discover -s tests -v
+```
+
+### Later: Render hosting
+
+This is prepared for a Python web service, but has not been deployed. Use these settings:
+
+- Build command: `pip install -r requirements.txt`
+- Start command: `gunicorn 'server:create_app()' --bind 0.0.0.0:$PORT --workers 1`
+- Health check: `/health`
+- Environment: `APP_ENV=production`, `SECRET_KEY=<a long random secret>`, and `DATABASE_PATH=/var/data/stillwatch.sqlite3`.
+- Attach a persistent disk at `/var/data` before using SQLite on Render. Ordinary service files are ephemeral; the local development database is not uploaded. SQLite with a disk is intended for a single service instance. Move to managed PostgreSQL before scaling across instances.
+
+Production enables Secure cookies, so serve it over HTTPS. Generate a production secret with `python -c "import secrets; print(secrets.token_hex(32))"` and enter it in Render's environment settings. Keep it out of Git.
+
+See [Render’s Flask deployment guide](https://render.com/docs/deploy-flask), [persistent disk documentation](https://render.com/docs/disks), and [Flask’s security guidance](https://flask.palletsprojects.com/en/stable/web-security/).
 
 Hand setup defaults to Both hands and waits until each completes the fist-to-open gesture. It starts automatically after both are selected and visible for the selection countdown (1.2 seconds since the last enrollment). Choose One hand intentionally when needed. Re-select hands restarts setup without clearing repetition totals.
 
