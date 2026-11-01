@@ -73,6 +73,7 @@ function Studio() {
           }}>⤨ <span>Random</span></button>
         </div>
       </div>
+      <div className="camera-slot">
       <div className="camera" ref=${stage}>
         <video ref=${video} autoPlay playsInline muted className="tracking-source" aria-hidden="true" tabIndex=${-1}></video>
         <canvas ref=${canvas} className="tracking-canvas" hidden=${!active && !loading}
@@ -121,6 +122,7 @@ function Studio() {
             `}
           </${React.Fragment}>
         `}
+      </div>
       </div>
       <div className="studio-bottom">
         <div className="session-summary">
