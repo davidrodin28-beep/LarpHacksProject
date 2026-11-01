@@ -1,4 +1,5 @@
 # Supabase handles accounts; Render serves only the allowlisted static build.
+# A second service (stillwatch-ai, FastAPI in sportgen/) invents and judges sports with NVIDIA Nemotron.
 services:
   - type: web
     name: stillwatch
@@ -10,6 +11,8 @@ services:
         sync: false
       - key: SUPABASE_PUBLISHABLE_KEY
         sync: false
+      - key: SPORTGEN_API_URL
+        sync: false   # https://<stillwatch-ai service>.onrender.com, baked into index.html at build time
     headers:
       - path: /auth-config.json
         name: Cache-Control
@@ -27,3 +30,19 @@ services:
       - type: redirect
         source: /signup
         destination: /signup.html
+
+  - type: web
+    name: stillwatch-ai
+    runtime: python
+    plan: free
+    rootDir: sportgen
+    buildCommand: pip install .
+    startCommand: uvicorn sportgen.server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: SPORTGEN_API_KEY
+        sync: false   # build.nvidia.com key for the "best" engine (Nemotron 3 Ultra)
+      - key: SPORTGEN_FAST_API_KEY
+        sync: false   # optional second key for the "fast" engine (Nemotron 3.5 Lightning)

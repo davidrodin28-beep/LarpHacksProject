@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     verify: bool = True  # re-judge the refined sport (one extra critic call); keep the candidate if refine regressed
     fast_model: str = "nvidia/nemotron-3.5-lightning-30b-a3b"  # `sportgen --fast` / survey answer "fast"
     fast_api_key: str = ""  # optional separate key for the fast engine; falls back to api_key
+    cors_origins: str = "http://localhost:8000,http://127.0.0.1:8000"  # comma-separated; add the Render frontend URL
 
     def use_fast(self) -> None:
         """Switch to the fast engine. Must run before the first LLM call (the client is cached)."""

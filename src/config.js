@@ -1,3 +1,6 @@
+// sportgen (AI sport inventor) API. Flask injects the deployed URL via <meta name="sportgen-api">; local default below.
+export const SPORTGEN_API_URL = (typeof document !== 'undefined' && document.querySelector('meta[name="sportgen-api"]')?.content) || 'http://localhost:8011';
+
 export const INFERENCE_INTERVAL_MS = 33;
 export const MOTION_FRAME_SIZE = { width: 320, height: 180 };
 export const MOTION_SAMPLE_STEP = 16;

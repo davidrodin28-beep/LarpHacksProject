@@ -76,6 +76,28 @@ Automatic movement counters replace the 6-7 counter:
 
 Pause analysis pauses counters; Reset data clears totals. Low-confidence or missing joints suspend the corresponding counter. A side view is useful for arm angles; use a front view for neck tilts. These are camera estimates, and occlusion or perspective can affect counts.
 
+## AI sport inventor and coaching
+
+**✦ Invent a sport** in the studio asks a few questions and has an AI (NVIDIA Nemotron on build.nvidia.com)
+design a new webcam game whose moves are exactly the events the tracker already counts (`arm_extend`, `punch`,
+`hand_open`, `hand_close`, `head_tilt`, `slip`). **Play it** turns the studio into a timed round scored live from
+those counts. Every sport, built-in or generated, also has **Coaching**: 2-3 drills the camera scores for
+completion, tempo and arm reach. Generation runs in a separate FastAPI service in `sportgen/` (generate ->
+critique -> refine pipeline with a playtest-simulating judge; see `sportgen/README.md`).
+
+Run it locally next to the static site:
+
+```sh
+cd sportgen && python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
+cp .env.example .env                      # paste a free build.nvidia.com key into SPORTGEN_API_KEY
+.venv/bin/uvicorn sportgen.server:app --port 8011
+```
+
+The page reads the engine URL from `<meta name="sportgen-api">` (empty = `http://localhost:8011`).
+`scripts/build_static.py` fills it from `SPORTGEN_API_URL`; on Render, `render.yaml` adds a second service
+`stillwatch-ai` whose URL you paste into the static site's `SPORTGEN_API_URL`, and the NVIDIA key goes on
+`stillwatch-ai`. "Fast" generations take ~1-3 min, "Best" ~5-8 min; the UI polls `GET /jobs/{id}`.
+
 ## Code layout
 
 - `index.html` contains the app structure and control IDs.

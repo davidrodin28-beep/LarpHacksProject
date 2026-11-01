@@ -4,6 +4,7 @@ import { createRoot } from 'https://esm.sh/react-dom@19.2.0/client';
 import htm from 'https://esm.sh/htm@3.1.1';
 import { createMotionTracker } from './tracking/createMotionTracker.js';
 import { lessons } from './coaching/lessons.js';
+import { SportInventor, LiveRound, fetchTriggers } from './sport-inventor.js';
 const html = htm.bind(React.createElement);
 const sports = { Basketball: 'Show us your best free throw.', Boxing: 'Give us your best shadowboxing impression.', Tennis: 'An imaginary racket. A championship serve.', Archery: 'Draw your imaginary bow. Find your target.', 'Table tennis': 'Make that imaginary rally look dramatic.', Volleyball: 'Set up the imaginary winning point.' };
 function Pose() { return html`<svg viewBox="0 0 300 300" role="img" aria-label="Illustration of a basketball pose"><circle className="ball" cx="222" cy="51" r="19"/><path className="ball-lines" d="M204 45q18 4 27 22m-26-29q-4 22 18 30M204 52h36"/><g className="bones"><circle cx="138" cy="88" r="20"/><path d="m137 110-3 17m-29 6 58-10m-58 10-35-37 23-31m70 58 34-29 13-25m-102 65 5 62 39-2 7-68m-46 70-26 35-15 36m80-73 28 26 23 29m-99-55 39-2"/></g><g className="joints">${[[105,133],[163,123],[70,96],[93,65],[197,94],[210,69],[113,196],[152,194],[87,231],[180,220],[72,267],[203,249]].map(([x,y])=>html`<circle key=${x} cx=${x} cy=${y} r="4"/>`)}</g></svg>`; }
@@ -14,13 +15,16 @@ function Studio() {
   const [tracking, setTracking] = useState({ phase: 'off' });
   const [message, setMessage] = useState('');
   const [mirrored, setMirrored] = useState(true);
+  const [custom, setCustom] = useState(null);      // generated sport being played, or null
+  const [inventing, setInventing] = useState(false); // inventor panel open
+  const [triggers, setTriggers] = useState(null);
   const video = useRef(null);
   const canvas = useRef(null);
   const stage = useRef(null);
   const tracker = useRef(null);
   const active = ['setup', 'tracking', 'paused'].includes(tracking.phase);
   const loading = tracking.phase === 'loading';
-  const lesson = lessons[sport][lessonIndex];
+  const lesson = (lessons[sport] || lessons.Basketball)[lessonIndex] || (lessons[sport] || lessons.Basketball)[0];
   const coaching = tracking.coaching || { phase: 'ready', step: 0, progress: 0 };
 
   function chooseLesson(nextSport, index = 0) {
@@ -50,6 +54,7 @@ function Studio() {
     });
     tracker.current = instance;
     instance.mirror(true);
+    fetchTriggers().then(t => { if (mounted) setTriggers(t); });
     return () => {
       mounted = false;
       instance.dispose();
@@ -72,18 +77,24 @@ function Studio() {
   }
 
   return html`
-    <section className="studio">
+    <div className="studio-wrap">
+    <section className=${'studio' + (inventing || custom ? ' studio--expanded' : '')}>
       <div className="studio-top">
         <span className="workspace-label">Your next alter ego</span>
         <div className="sport-controls">
           <label htmlFor="sport">Your sport</label>
-          <select id="sport" value=${sport} onChange=${event => chooseLesson(event.target.value)}>
+          <select id="sport" value=${custom ? '__custom' : sport} onChange=${event => {
+            if (event.target.value === '__custom') return;
+            setCustom(null); chooseLesson(event.target.value);
+          }}>
             ${Object.keys(sports).map(name => html`<option key=${name}>${name}</option>`)}
+            ${custom && html`<option value="__custom">${custom.name} (AI)</option>`}
           </select>
           <button onClick=${() => {
             const choices = Object.keys(sports).filter(name => name !== sport);
-            chooseLesson(choices[Math.floor(Math.random() * choices.length)]);
+            setCustom(null); chooseLesson(choices[Math.floor(Math.random() * choices.length)]);
           }}>⤨ <span>Random</span></button>
+          <button className=${inventing ? 'active' : ''} aria-pressed=${inventing} onClick=${() => setInventing(v => !v)}>✦ <span>Invent a sport</span></button>
         </div>
       </div>
       <div className="camera-slot">
@@ -139,6 +150,8 @@ function Studio() {
       </div>
       <div className="studio-bottom">
         <div className="session-summary">
+          ${custom ? html`<p><strong>${custom.name}.</strong> ${custom.tagline}</p>
+          <p className="extension-count">Arm extensions: <output aria-label="Arm extensions">${tracking.metrics?.counts?.arms ?? 0}</output></p>` : html`
           <div className="coach-heading"><span className="workspace-label">Your coach</span><span className="coach-level">Basics</span></div>
           <label className="move-label" htmlFor="move">Choose a move</label>
           <select id="move" value=${lessonIndex} onChange=${event => chooseLesson(sport, Number(event.target.value))}>
@@ -171,6 +184,7 @@ function Studio() {
           </ol>
           <details className="form-tips"><summary>Form tip & camera limits</summary><p>${lesson.tip}</p><p>Rehearse slowly without equipment. Hold each position for a moment. Camera checks estimate upper-body positions; they do not verify complete technique, footwork, or sporting performance.</p></details>
           <p className="extension-count">Arm extensions: <output aria-label="Arm extensions">${tracking.metrics?.counts?.arms ?? 0}</output></p>
+          `}
         </div>
         <button className="primary" disabled=${!active} onClick=${async () => {
           try {
@@ -183,6 +197,12 @@ function Studio() {
       </div>
       <p className="message" role="status">${message}</p>
     </section>
+    <section className="panels">
+      ${inventing && html`<${SportInventor} disabled=${false} onPlay=${s => { setCustom(s); setInventing(false); }}/>`}
+      ${custom && html`<${LiveRound} sport=${custom} triggers=${triggers || {}} counts=${tracking.metrics?.counts} cameraOn=${tracking.phase === "tracking"}
+          onExit=${() => { setCustom(null); setInventing(true); }}/>`}
+    </section>
+    </div>
   `;
 }
 function AccountControls() {

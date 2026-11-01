@@ -948,3 +948,47 @@ footer {
   .studio { grid-template-columns: minmax(0, 1fr) 260px; }
   .coach-heading { margin-bottom: 10px; }
 }
+/* ---- AI sport inventor + live round ---- */
+.sport-controls button.active { background:var(--lime); border-color:var(--lime); }
+.inventor { border:1px solid var(--line); border-radius:14px; padding:20px; margin:16px 0; background:var(--sage); }
+.inventor-head h2 { margin:0 0 4px; font-size:1.25rem; }
+.inventor-head p { margin:0 0 14px; color:var(--muted); }
+.inventor-form { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px 14px; }
+.inventor-form label { display:flex; flex-direction:column; gap:4px; font-size:.9rem; color:var(--muted); }
+.inventor-form label.wide { grid-column:1 / -1; }
+.inventor-form select,.inventor-form input { min-height:42px; padding:8px 12px; border:1px solid var(--line); border-radius:9px; background:#fff; color:var(--ink); }
+.inventor-actions { display:flex; align-items:center; gap:14px; margin-top:14px; flex-wrap:wrap; }
+.inventor-status { display:inline-flex; align-items:center; gap:8px; color:var(--muted); }
+.inventor-status i { width:10px; height:10px; border-radius:50%; background:var(--lime); animation:pulse 1.2s infinite; }
+@keyframes pulse { 0%,100% { opacity:.3; } 50% { opacity:1; } }
+.rule-card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px 20px; margin-top:16px; }
+.rule-card header h3 { margin:0; font-size:1.4rem; }
+.rule-card .rule-tagline { margin:2px 0 12px; color:var(--muted); font-style:italic; }
+.rule-card p { margin:8px 0; line-height:1.45; }
+.rule-card .moves { list-style:none; margin:10px 0; padding:0; display:grid; gap:8px; }
+.rule-card .moves li { display:flex; gap:12px; align-items:flex-start; padding:10px 12px; border:1px solid var(--line); border-radius:10px; }
+.rule-card code { font-size:.78rem; color:var(--muted); background:var(--sage); padding:1px 6px; border-radius:6px; margin-left:6px; }
+.pts { min-width:40px; text-align:center; font-weight:700; border-radius:8px; padding:4px 0; background:var(--lime); }
+.pts.neg { background:#f6c9c9; } .pts.zero { background:var(--sage); color:var(--muted); }
+.rule-card footer { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:14px; }
+.rule-card .judge,.rule-card .alts { color:var(--muted); font-size:.85rem; }
+.live-round { border:2px solid var(--ink); border-radius:14px; padding:18px 20px; margin:16px 0; background:#fff; }
+.live-head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+.live-head h3 { margin:2px 0 0; font-size:1.4rem; }
+.clock { font-size:2.4rem; font-weight:700; font-variant-numeric:tabular-nums; }
+.clock.urgent { color:#b4321e; }
+.scoreboard { display:grid; grid-template-columns:auto 1fr; gap:18px; align-items:center; margin:12px 0; }
+.scoreboard .total { font-size:4rem; font-weight:800; line-height:1; font-variant-numeric:tabular-nums; min-width:3ch; }
+.scoreboard ul { list-style:none; margin:0; padding:0; display:grid; gap:6px; }
+.scoreboard li { display:grid; grid-template-columns:1fr auto auto; gap:12px; align-items:center; padding:6px 10px; border:1px solid var(--line); border-radius:8px; }
+.scoreboard .hits { color:var(--muted); font-variant-numeric:tabular-nums; }
+.live-hint { color:var(--muted); margin:6px 0 12px; }
+.live-actions { display:flex; gap:10px; flex-wrap:wrap; }
+
+/* Panels below the studio: the shell is a fixed-height, no-scroll layout sized for header + studio + footer.
+   When the inventor/round are shown, the studio area scrolls and the studio keeps its height. */
+.studio-wrap { min-height:0; min-width:0; display:flex; flex-direction:column; overflow-y:auto; overscroll-behavior:contain; }
+.studio-wrap > .studio { flex:1 0 auto; }
+.studio-wrap > .studio--expanded { flex:0 0 auto; min-height:min(68dvh, 600px); }
+.panels { display:grid; gap:16px; padding:0 0 24px; }
+.panels:empty { display:none; }
