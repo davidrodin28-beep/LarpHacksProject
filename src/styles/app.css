@@ -407,102 +407,6 @@ h2 {
   font-size:11px;
 }
 
-@media(min-width:1500px) {
-  .intro {
-    min-height:720px;
-  }
-}
-
-@media(max-width:700px) {
-  .shell {
-    padding:0 22px;
-  }
-  header {
-    height:78px;
-  }
-  .brand {
-    font-size:25px;
-  }
-  .tagline {
-    display:none;
-  }
-  .intro {
-    grid-template-columns:1fr;
-    text-align:center;
-    padding:50px 0 40px;
-    gap:40px;
-  }
-  .intro h1 {
-    font-size:57px;
-    letter-spacing:-3px;
-  }
-  .intro p {
-    font-size:16px;
-    margin-bottom:28px;
-  }
-  .kicker {
-    font-size:11px;
-    margin-bottom:20px;
-  }
-  .start {
-    min-height:54px;
-    font-size:16px;
-    min-width:170px;
-  }
-  .art {
-    max-width:280px;
-    justify-self:center;
-  }
-  .art>span {
-    font-size:11px;
-  }
-  .studio-top {
-    align-items:stretch;
-    flex-direction:column;
-    gap:14px;
-  }
-  .workspace-label {
-    font-size:11px;
-  }
-  .sport-controls {
-    flex-wrap:wrap;
-  }
-  .sport-controls label {
-    width:100%;
-  }
-  .sport-controls select {
-    flex:1;
-    min-width:0;
-    font-size:16px;
-  }
-  .camera {
-    aspect-ratio:4/3;
-    max-height:58svh;
-    min-height:290px;
-  }
-  .camera-empty h2 {
-    font-size:24px;
-  }
-  .camera-empty p {
-    font-size:13px;
-  }
-  .studio-bottom {
-    align-items:stretch;
-    flex-direction:column;
-    gap:7px;
-  }
-  .studio-bottom .primary {
-    width:100%;
-  }
-  footer {
-    justify-content:center;
-    flex-wrap:wrap;
-    padding:20px 0;
-    font-size:11px;
-    gap:10px 20px;
-  }
-}
-
 /* Camera integration: inference and drawing stay outside React. */
 .camera video.tracking-source {
   width: 1px;
@@ -583,4 +487,424 @@ h2 {
 .extension-count output {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+
+/* The application fits the visible browser window; the camera yields space to controls. */
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+.shell {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  padding: 0 clamp(12px, 3vw, 44px);
+}
+
+header {
+  height: clamp(48px, 10dvh, 80px);
+}
+
+footer {
+  min-height: 32px;
+  padding: 7px 0;
+  font-size: 11px;
+}
+
+.intro {
+  min-height: 0;
+  padding: clamp(12px, 4dvh, 40px) 0;
+  gap: clamp(16px, 4vw, 40px);
+}
+
+.intro h1 {
+  font-size: clamp(40px, min(6vw, 12dvh), 80px);
+  margin-bottom: clamp(12px, 3dvh, 28px);
+}
+
+.kicker {
+  margin-bottom: clamp(12px, 3dvh, 24px);
+}
+
+.intro p {
+  font-size: clamp(14px, 2.5dvh, 20px);
+  margin-bottom: clamp(16px, 4dvh, 32px);
+}
+
+.art {
+  width: min(100%, 54dvh);
+  max-width: 440px;
+}
+
+.start {
+  min-height: 48px;
+  font-size: 17px;
+}
+
+.studio {
+  min-height: 0;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 224px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 16px 24px;
+  padding: 18px 0;
+}
+
+.studio-top {
+  grid-column: 2;
+  grid-row: 1;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 20px;
+  margin: 0;
+}
+
+.workspace-label {
+  font-size: 10px;
+  letter-spacing: 1.7px;
+}
+
+.sport-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 9px;
+}
+
+.sport-controls label {
+  margin: 0;
+}
+
+.sport-controls select {
+  min-width: 0;
+  width: 100%;
+}
+
+.camera-slot {
+  grid-column: 1;
+  grid-row: 1 / -1;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  container-type: size;
+}
+
+.camera {
+  /* Keep the preview proportional within the space left by the controls. */
+  width: min(100cqw, 177.777cqh);
+  height: min(100cqh, 56.25cqw);
+  aspect-ratio: 16 / 9;
+  min-height: 0;
+  max-height: none;
+}
+
+.studio-bottom {
+  grid-column: 2;
+  grid-row: 2;
+  min-height: 0;
+  margin: 0;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.studio-bottom .primary {
+  flex-shrink: 0;
+  gap: 10px;
+  width: 100%;
+}
+
+.message {
+  grid-column: 2;
+  grid-row: 3;
+  min-height: 0;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.message:empty {
+  display: none;
+}
+
+.camera-empty {
+  padding: 12px;
+}
+
+@media (max-width: 700px) and (min-height: 501px) {
+  .tagline {
+    display: none;
+  }
+
+  .brand {
+    font-size: 25px;
+  }
+
+  .intro {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+    text-align: center;
+    gap: 16px;
+  }
+
+  .intro h1 {
+    font-size: clamp(40px, 11vw, 64px);
+  }
+
+  .art {
+    height: min(100%, 32dvh);
+    width: auto;
+    max-width: 100%;
+    justify-self: center;
+  }
+
+  .art > span {
+    font-size: 10px;
+    white-space: nowrap;
+    padding: 5px 9px;
+  }
+
+  .studio {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    gap: 12px;
+    padding: 12px 0;
+  }
+
+  .studio-top {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .workspace-label {
+    display: none;
+  }
+
+  .sport-controls {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+
+  .sport-controls label {
+    grid-column: 1 / -1;
+    font-size: 12px;
+  }
+
+  .sport-controls select {
+    font-size: 16px;
+  }
+
+  .camera-slot {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .studio-bottom {
+    grid-column: 1;
+    grid-row: 3;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .studio-bottom p {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .studio-bottom .primary {
+    width: auto;
+    max-width: 46%;
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  .message {
+    grid-column: 1;
+    grid-row: 4;
+  }
+
+  .camera-empty h2 {
+    font-size: 22px;
+    margin: 10px 0;
+  }
+
+  .camera-empty p {
+    font-size: 12px;
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+
+  .camera-icon {
+    font-size: 28px;
+  }
+
+  footer {
+    gap: 8px;
+    font-size: 10px;
+  }
+
+  footer span:last-child {
+    display: none;
+  }
+
+  .enrollment {
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+    padding: 10px;
+    font-size: 12px;
+  }
+
+  .enrollment p {
+    font-size: 11px;
+  }
+}
+
+/* Landscape phones and short laptop windows keep actions beside the preview. */
+@media (max-height: 500px) {
+  header {
+    height: 48px;
+  }
+
+  .brand {
+    font-size: 23px;
+  }
+
+  .tagline,
+  footer,
+  .workspace-label {
+    display: none;
+  }
+
+  .shell {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .studio {
+    grid-template-columns: minmax(0, 1fr) 180px;
+    gap: 10px 16px;
+    padding: 10px 0;
+  }
+
+  .studio-top {
+    gap: 8px;
+  }
+
+  .sport-controls {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
+  }
+
+  .sport-controls label {
+    grid-column: 1 / -1;
+  }
+
+  .sport-controls button {
+    padding: 8px;
+  }
+
+  .sport-controls button span {
+    display: none;
+  }
+
+  .studio-bottom p {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .camera-empty .camera-icon {
+    display: none;
+  }
+
+  .camera-empty h2 {
+    font-size: 20px;
+    margin: 0 0 8px;
+  }
+
+  .camera-empty p {
+    font-size: 12px;
+    line-height: 1.4;
+    margin-bottom: 12px;
+  }
+
+  .intro {
+    padding: 10px 0;
+  }
+
+  .intro h1 {
+    font-size: clamp(32px, 8dvh, 48px);
+    letter-spacing: -2px;
+    margin-bottom: 12px;
+  }
+
+  .intro h1 em {
+    letter-spacing: -2px;
+  }
+
+  .intro p {
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+
+  .kicker {
+    margin-bottom: 10px;
+    font-size: 10px;
+  }
+
+  .art {
+    width: min(100%, 60dvh);
+  }
+
+  .art > span {
+    font-size: 10px;
+    padding: 5px;
+  }
+
+  .enrollment {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    padding: 8px;
+    font-size: 11px;
+  }
+
+  .enrollment p {
+    display: none;
+  }
+
+  .enrollment span {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 700px) and (min-height: 501px) {
+  .camera {
+    width: min(100cqw, 133.333cqh);
+    height: min(100cqh, 75cqw);
+    aspect-ratio: 4 / 3;
+  }
+}
+
+@media (max-width: 700px) and (max-height: 650px) and (min-height: 501px) {
+  .camera-empty .camera-icon,
+  .camera-empty p {
+    display: none;
+  }
+
+  .camera-empty h2 {
+    font-size: 19px;
+    margin: 0 0 12px;
+  }
+
+  .intro .art {
+    max-height: 24dvh;
+  }
 }
