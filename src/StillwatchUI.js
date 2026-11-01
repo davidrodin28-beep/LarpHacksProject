@@ -59,6 +59,7 @@ function Studio() {
     });
     tracker.current = instance;
     instance.mirror(true);
+    instance.selectLesson('Boxing', 0);
     fetchTriggers().then(t => { if (mounted) setTriggers(t); });
     return () => {
       mounted = false;
@@ -87,18 +88,6 @@ function Studio() {
       <div className="studio-top">
         <span className="workspace-label">Your personal boxing corner</span>
         <div className="sport-controls">
-          <label htmlFor="sport">Your sport</label>
-          <select id="sport" value=${custom ? '__custom' : sport} onChange=${event => {
-            if (event.target.value === '__custom') return;
-            setCustom(null); chooseLesson(event.target.value);
-          }}>
-            ${Object.keys(sports).map(name => html`<option key=${name}>${name}</option>`)}
-            ${custom && html`<option value="__custom">${custom.name} (AI)</option>`}
-          </select>
-          <button onClick=${() => {
-            const choices = Object.keys(sports).filter(name => name !== sport);
-            setCustom(null); chooseLesson(choices[Math.floor(Math.random() * choices.length)]);
-          }}>⤨ <span>Random</span></button>
           <button className=${inventing ? 'active' : ''} aria-pressed=${inventing} onClick=${() => setInventing(v => !v)}>✦ <span>Invent a sport</span></button>
         </div>
       </div>
