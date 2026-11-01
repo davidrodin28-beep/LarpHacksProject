@@ -31,7 +31,7 @@ const ui = {
   sensitivityLabel: $('sensitivityLabel'),
   graph: $('graph'),
   emoteCount: $('emoteCount'),
-  countEmoteButton: $('countEmoteBtn'),
+  emoteStatus: $('emoteStatus'),
   toast: $('toast'),
 };
 
@@ -50,7 +50,6 @@ let lastInference = 0;
 let sessionStartedAt = 0;
 let toastTimeout = 0;
 let mirrored = true;
-let emoteCounting = false;
 let results = { pose: null, hands: null, face: null };
 
 function showToast(message) {
@@ -99,12 +98,6 @@ function updateCalibrationStatus() {
   ui.lockHands.disabled = !enrollment.canConfirm;
 }
 
-function updateEmoteCounterButton() {
-  ui.countEmoteButton.textContent = emoteCounting ? 'Stop auto count' : 'Start auto count';
-  ui.countEmoteButton.classList.toggle('active', emoteCounting);
-  ui.countEmoteButton.setAttribute('aria-pressed', String(emoteCounting));
-}
-
 function drawFrame() {
   const handOverlays = enrollment.visibleHands(results.hands, results.pose);
   renderer.render({
@@ -130,9 +123,10 @@ function loop() {
         if (enrollment.calibrating) {
           enrollment.observe(results.hands, now);
           updateCalibrationStatus();
-        } else if (emoteCounting) {
+        } else {
           const selectedHands = enrollment.visibleHands(results.hands, results.pose);
           ui.emoteCount.textContent = String(emoteCounter.sample(selectedHands, now));
+          ui.emoteStatus.textContent = selectedHands.length ? 'Counting automatically' : 'Show enrolled hands';
         }
       } catch (error) {
         console.error('Landmark inference failed', error);
@@ -157,10 +151,8 @@ async function startCamera() {
     lastInference = 0;
     results = { pose: null, hands: null, face: null };
     motion.reset();
-    emoteCounting = false;
     emoteCounter.resetGesture();
-    updateEmoteCounterButton();
-    ui.countEmoteButton.disabled = true;
+    ui.emoteStatus.textContent = 'Select hands to begin';
     enrollment.begin();
     sessionStartedAt = Date.now();
     renderer.resize(ui.stage);
@@ -197,10 +189,8 @@ async function startCamera() {
 function stopCamera() {
   running = false;
   paused = false;
-  emoteCounting = false;
   emoteCounter.resetGesture();
-  updateEmoteCounterButton();
-  ui.countEmoteButton.disabled = true;
+  ui.emoteStatus.textContent = 'Camera off';
   enrollment.reset();
   cancelAnimationFrame(animationFrame);
   camera.stop();
@@ -221,6 +211,7 @@ function stopCamera() {
 function togglePause() {
   if (!running || enrollment.calibrating) return;
   paused = !paused;
+  ui.emoteStatus.textContent = paused ? 'Paused' : 'Counting automatically';
   emoteCounter.resetGesture();
   ui.pauseButton.innerHTML = paused
     ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="m8 5 11 7-11 7z"/></svg>Resume analysis'
@@ -293,18 +284,13 @@ ui.lockHands.addEventListener('click', () => {
   if (!enrollment.calibrating || !enrollment.confirm()) return;
   ui.calibrationPanel.style.display = 'none';
   ui.pauseButton.disabled = false;
-  ui.countEmoteButton.disabled = false;
+  emoteCounter.resetGesture();
+  ui.emoteStatus.textContent = 'Counting automatically';
   showToast(`Tracking ${enrollment.targets.length} selected hand${enrollment.targets.length === 1 ? '' : 's'}`);
 });
 ui.sensitivity.addEventListener('input', () => { ui.sensitivityLabel.value = ui.sensitivity.value; });
 ui.snapshotButton.addEventListener('click', saveSnapshot);
 $('resetBtn').addEventListener('click', resetMetrics);
-$('countEmoteBtn').addEventListener('click', () => {
-  emoteCounting = !emoteCounting;
-  emoteCounter.resetGesture();
-  updateEmoteCounterButton();
-  showToast(emoteCounting ? '6-7 wrist tracking started' : '6-7 wrist tracking stopped');
-});
 $('mirrorBtn').addEventListener('click', () => {
   setMirror(!mirrored);
 });

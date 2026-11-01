@@ -28,3 +28,5 @@ You can select a camera, adjust motion sensitivity, pause analysis, mirror the p
 - `src/config.js` centralizes model URLs and processing settings.
 
 Each module exposes a small interface; `src/app.js` is the composition layer that passes results between them.
+
+6-7 counting starts automatically after you confirm hand setup. Each full wrist up-and-down movement adds one to the total. Pause analysis pauses counting, and Reset data clears the total.
