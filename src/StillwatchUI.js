@@ -123,7 +123,12 @@ function Studio() {
         `}
       </div>
       <div className="studio-bottom">
-        <p><strong>${sport}.</strong> ${sports[sport]}</p>
+        <div className="session-summary">
+          <p><strong>${sport}.</strong> ${sports[sport]}</p>
+          <p className="extension-count">
+            Arm extensions: <output aria-label="Arm extensions">${tracking.metrics?.counts?.arms ?? 0}</output>
+          </p>
+        </div>
         <button className="primary" disabled=${!active} onClick=${async () => {
           try {
             await tracker.current.snapshot();

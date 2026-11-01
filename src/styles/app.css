@@ -569,3 +569,18 @@ h2 {
 .settings button + button {
   margin-top: 8px;
 }
+
+/* Compact counter supplied by the existing tracking adapter. */
+.session-summary p {
+  margin: 0;
+}
+
+.session-summary .extension-count {
+  margin-top: 6px;
+  color: var(--ink);
+}
+
+.extension-count output {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
