@@ -126,7 +126,7 @@ function loop() {
         } else {
           const selectedHands = enrollment.visibleHands(results.hands, results.pose);
           ui.emoteCount.textContent = String(emoteCounter.sample(selectedHands, now));
-          ui.emoteStatus.textContent = selectedHands.length ? 'Counting automatically' : 'Show enrolled hands';
+          ui.emoteStatus.textContent = selectedHands.length ? emoteCounter.status : 'Show enrolled hands';
         }
       } catch (error) {
         console.error('Landmark inference failed', error);
