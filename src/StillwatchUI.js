@@ -226,6 +226,11 @@ function AccountControls() {
   const [error, setError] = useState('');
   const name = document.getElementById('root').dataset.accountName;
   async function logout() {
+    if (document.getElementById('root').dataset.guestMode === 'true') {
+      sessionStorage.removeItem('boxingpal-guest');
+      window.location.replace('/login.html');
+      return;
+    }
     setBusy(true);
     setError('');
     try {
@@ -240,7 +245,7 @@ function AccountControls() {
   }
   return html`<div className="account-controls">
     <span className="account-name" title=${name}>${name}</span>
-    <button type="button" onClick=${logout} disabled=${busy}>${busy ? 'Logging out…' : 'Log out'}</button>
+    <button type="button" onClick=${logout} disabled=${busy}>${busy ? 'Logging out…' : document.getElementById('root').dataset.guestMode === 'true' ? 'Exit guest mode' : 'Log out'}</button>
     ${error && html`<span role="alert" className="account-error">${error}</span>`}
   </div>`;
 }

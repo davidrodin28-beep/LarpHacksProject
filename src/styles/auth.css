@@ -93,3 +93,5 @@ html:has(.auth-body), .auth-body {height:auto;overflow:auto;}
 }
 .auth-notice {margin:0 0 20px;padding:14px;border:1px solid var(--line);border-radius:9px;background:var(--sage);color:var(--ink);font-size:13px;line-height:1.6;}
 .auth-form .auth-error {margin:0 0 20px;}
+
+.guest-access{border-top:1px solid var(--line);margin-top:22px;padding-top:18px}.guest-access-button{display:flex;justify-content:space-between;align-items:center;padding:13px 16px;background:var(--sage);border:1px solid var(--line);border-radius:9px;text-decoration:none;font-size:14px;color:var(--ink)}.guest-access-button:hover{background:#dce7cc}.guest-access-button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}.guest-access p{font-size:11px;text-align:center;color:var(--muted);line-height:1.5;margin:10px 0 0}

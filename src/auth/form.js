@@ -53,7 +53,7 @@ form.addEventListener('submit', async event => {
       // End the recovery session so the next visit uses the new credentials.
       const { error } = await client.auth.signOut({ scope: 'local' });
       if (error) showMessage('Your password has been updated. Return to log in to continue.');
-    } else if (result.data.session) window.location.replace('/');
+    } else if (result.data.session) { sessionStorage.removeItem('boxingpal-guest'); window.location.replace('/'); }
     else {
       showMessage('Check your email to confirm your account, then return here to log in. If you already have an account, use Log in.');
       form.querySelectorAll('input[type=password]').forEach(input => { input.value = ''; });
@@ -91,7 +91,7 @@ try {
     canSubmit = Boolean(session);
     button.disabled = !canSubmit;
     if (!session) showMessage('Open the reset link from your email in the same browser where you requested it. If it has expired, request a new link below.', true);
-  } else if (session && !forgotPassword) window.location.replace('/');
+  } else if (session && !forgotPassword) { sessionStorage.removeItem('boxingpal-guest'); window.location.replace('/'); }
   else {
     canSubmit = true;
     button.disabled = false;

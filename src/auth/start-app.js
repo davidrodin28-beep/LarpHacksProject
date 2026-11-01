@@ -2,6 +2,17 @@ import { getClient } from './client.js';
 
 const root = document.getElementById('root');
 try {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('guest') === '1') {
+    sessionStorage.setItem('boxingpal-guest', '1');
+    params.delete('guest');
+    history.replaceState(null, '', window.location.pathname + (params.size ? '?' + params : '') + window.location.hash);
+  }
+  if (sessionStorage.getItem('boxingpal-guest') === '1') {
+    root.dataset.accountName = 'Guest';
+    root.dataset.guestMode = 'true';
+    await import('../StillwatchUI.js');
+  } else {
   const client = await getClient();
   const { data: { session }, error: sessionError } = await client.auth.getSession();
   if (sessionError) throw sessionError;
@@ -19,6 +30,7 @@ try {
       });
       await import('../StillwatchUI.js');
     }
+  }
   }
 } catch (error) {
   root.replaceChildren();
