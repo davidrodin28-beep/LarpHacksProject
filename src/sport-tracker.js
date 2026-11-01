@@ -142,7 +142,12 @@ export class SportTracker {
     }
     const measuredQuality=Number.isFinite(quality)?Math.round(clamp(quality,0,100)):null;
     const totalScore=activity===0?0:measuredQuality===null?activity:score();
-    return {sport:this.sport,score:Math.round(clamp(totalScore,0,100)),activityText,tips:tip.slice(0,2),chinTuckPercent};
+    const scoreMeaning=activity===0
+      ?'No sport-specific movement was detected, so the round score is 0.'
+      :measuredQuality===null
+        ?`This score is based on detected activity (${Math.round(activity)}/100); no form measure was available this round.`
+        :`The score blends measured movement quality (${measuredQuality}/100, 65% weight) with detected activity (${Math.round(activity)}/100, 35% weight). These are camera estimates, not a certified technique grade.`;
+    return {sport:this.sport,score:Math.round(clamp(totalScore,0,100)),activityText,scoreMeaning,tips:tip.slice(0,2),chinTuckPercent};
   }
   get metrics() {
     const d=this.bucket();
@@ -197,6 +202,66 @@ export class SportTracker {
       Golf:'Counts broad cross-body arm swings. Extension, torso turn, and swing time are camera-based estimates; the tracker cannot identify club path, ball contact, or shot result.',
       Baseball:'Counts a bent-to-straight arm cycle that finishes overhead as a throw-like motion. It reports elbow extension and arm side only; it cannot assess velocity, release point, or ball trajectory.',
     })[this.sport];
+  }
+  get dataGuide() {
+    return ({
+      Boxing:[
+        'Jabs and crosses count bent-to-straight arm cycles with visible wrist travel; stance sets which arm is lead.',
+        'A 1–2 counts when a detected jab is followed by a cross within about 1.3 seconds.',
+        'Elbow extension averages the elbow-straightening estimate on counted punches. It does not grade impact, guard, or footwork.',
+        'Chin tuck is the share of visible face samples where the chin moved down/back from the neutral countdown baseline. Keep your face in frame.',
+      ],
+      Basketball:[
+        'Shot-like motions count a bent-to-straight arm cycle ending with the wrist above the shoulder; they are not shot attempts or makes.',
+        'Release form estimate combines elbow extension (70%) and wrist height above the shoulder (30%).',
+        'Jump estimates count pelvis lift above the standing baseline. Peak lift is a percentage of visible shoulder-to-ankle length, not inches or centimeters.',
+      ],
+      Tennis:[
+        'Swing estimates count wrist travel relative to shoulder width, including camera-depth movement when 3D pose data is available.',
+        'Forehand/backhand direction is a rough cue from wrist travel and detected hand side, not a verified stroke classification.',
+        'Elbow extension is averaged at detected swings. Racket contact, ball contact, placement, and accuracy are not observed.',
+      ],
+      'Table tennis':[
+        'Swing estimates count shorter wrist paths relative to shoulder width, including depth movement when available.',
+        'Forehand/backhand direction is an approximate wrist-travel cue, not a verified stroke or ball-contact count.',
+        'Elbow extension is averaged at detected swings; paddle contact and placement are not seen.',
+      ],
+      Badminton:[
+        'Swing estimates count wrist travel relative to shoulder width, including depth movement when available.',
+        'Forehand/backhand direction is estimated from wrist travel; an occluded wrist can hide an overhead swing.',
+        'Elbow extension is averaged at detected swings. Shuttle contact and shot placement are not measured.',
+      ],
+      Archery:[
+        'A stable draw hold needs one extended arm, one bent arm, wrists near shoulder height, and about one second in the pose.',
+        'Average hold is measured until the pose ends; a hold is recorded after it passes the one-second threshold.',
+        'Shoulder alignment estimates visible shoulder level and wrist height. Aim, bow alignment, and release are not measured.',
+      ],
+      Volleyball:[
+        'Overhead swings count a bent-to-straight arm cycle ending above the shoulder.',
+        'Jump estimates count pelvis lift; peak lift is relative to visible shoulder-to-ankle length.',
+        'Full extension is average elbow straightening at detected overhead cycles. Ball contact and landing quality are not measured.',
+      ],
+      Soccer:[
+        'Kick estimates count a knee bend followed by leg extension while the knee is visibly lifted.',
+        'Left/right totals show which leg completed the cycle; kick extension is the average knee-straightening estimate.',
+        'Ball contact, kick direction, and power are not seen. A side view with the full leg visible works best.',
+      ],
+      Running:[
+        'Steps are alternating knee-lift estimates, not measured foot strikes.',
+        'Cadence estimates steps per minute from recent knee lifts. Left/right totals show whether both sides were detected.',
+        'Distance, speed, ground contact, and running efficiency are not measured. Keep hips and knees visible.',
+      ],
+      Golf:[
+        'Swing estimates count broad wrist travel across or in camera depth relative to the torso.',
+        'Turn estimate uses visible shoulder-to-hip line separation at a detected swing; arm extension is averaged at those swings.',
+        'Tempo is approximate time across the detected wrist path. Club path, ball contact, and shot result are not measured.',
+      ],
+      Baseball:[
+        'Throw-like motions count a bent-to-straight arm cycle ending overhead; left/right totals show the detected arm.',
+        'Arm extension and overhead release are elbow-angle estimates at counted motions.',
+        'Throwing speed, release point, ball trajectory, and injury risk are not measured.',
+      ],
+    })[this.sport] || [];
   }
   sample(result,now,aspect=1) {
     const pose=result?.landmarks?.[0]||[], world=result?.worldLandmarks?.[0]||[];

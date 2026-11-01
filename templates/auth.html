@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101311">
+  <title>{{ 'Create account' if signup else 'Log in' }} — Stillwatch</title>
+  <link rel="stylesheet" href="/src/styles/auth.css">
+</head>
+<body class="auth-body">
+  <div class="shell">
+    <header class="topbar"><a class="brand" href="/login"><span class="brand-mark" aria-hidden="true">S</span>Stillwatch</a><span class="privacy"><i></i> CAMERA STAYS ON YOUR DEVICE</span></header>
+    <main>
+      <section class="hero">
+        <div class="kicker">SPORT PRACTICE, IN YOUR BROWSER</div>
+        <h1>Move. Review.<br><em>Get better.</em></h1>
+        <p class="lede">Use your camera to explore sport movements and get quick, measurable practice feedback.</p>
+        <div class="sports" aria-label="Available sports">
+          <span>Basketball</span><span>Boxing</span><span>Tennis</span><span>Archery</span><span>Table tennis</span><span>Volleyball</span><span>Badminton</span><span>Soccer</span><span>Running</span><span>Golf</span><span>Baseball</span>
+        </div>
+      </section>
+      <section class="columns">
+        <article class="info-card">
+          <div class="kicker">WHAT IT TRACKS</div>
+          <h2>Practice estimates, sport by sport</h2>
+          <ul class="sport-info">
+            <li><strong>Boxing</strong><span>Jab, cross, and 1–2 sequences; arm extension and chin position.</span></li>
+            <li><strong>Basketball</strong><span>Shot-like arm releases and estimated jump lift.</span></li>
+            <li><strong>Racket sports</strong><span>Racket-swing-like wrist movement and rough direction.</span></li>
+            <li><strong>Archery</strong><span>Draw-like arm position and steady hold duration.</span></li>
+            <li><strong>Volleyball &amp; baseball</strong><span>Overhead arm extension and jump estimates where available.</span></li>
+            <li><strong>Soccer, running &amp; golf</strong><span>Kick-like leg extension, alternating knee lifts, or broad swing movement.</span></li>
+          </ul>
+          <p class="fine">Choose a 10, 20, or 30 second practice round for a camera-based score and a couple of movement cues. These are rough practice estimates, not professional coaching or validated measurements.</p>
+          <div class="privacy-note"><span aria-hidden="true">◎</span><span><strong>Privacy by design</strong><br>Camera frames are analyzed in your browser and are not uploaded or recorded. An account is used to access the tracker; movement results are not saved to your account.</span></div>
+        </article>
+        <section class="auth-card" aria-labelledby="auth-title">
+          <div class="kicker">{{ 'GET STARTED' if signup else 'WELCOME BACK' }}</div>
+          <h2 id="auth-title">{{ 'Create your account' if signup else 'Log in to Stillwatch' }}</h2>
+          <p class="subcopy">{{ 'One account gets you into every sport.' if signup else 'Pick up where your next practice starts.' }}</p>
+          {% if error %}<div class="auth-error" role="alert">{{ error }}</div>{% endif %}
+          <form method="post" action="{{ '/signup' if signup else '/login' }}" class="auth-form">
+            <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
+            {% if signup %}<label for="name">Name</label><input id="name" name="name" autocomplete="name" maxlength="80" value="{{ name }}" required>{% endif %}
+            <label for="email">Email address</label><input id="email" type="email" name="email" autocomplete="email" maxlength="254" value="{{ email }}" placeholder="you@example.com" required>
+            <label for="password">Password</label><input id="password" type="password" name="password" autocomplete="{{ 'new-password' if signup else 'current-password' }}" {% if signup %}minlength="12" aria-describedby="password-help"{% endif %} maxlength="128" required>
+            {% if signup %}<p id="password-help" class="help">Use 12–128 characters. A longer passphrase works well.</p><label for="confirm_password">Confirm password</label><input id="confirm_password" type="password" name="confirm_password" autocomplete="new-password" minlength="12" maxlength="128" required>{% endif %}
+            <button class="submit" type="submit">{{ 'Create account' if signup else 'Log in' }} <span aria-hidden="true">↗</span></button>
+          </form>
+          <p class="auth-switch">{{ 'Already have an account?' if signup else 'New to Stillwatch?' }} <a href="{{ '/login' if signup else '/signup' }}">{{ 'Log in' if signup else 'Create an account' }}</a></p>
+        </section>
+      </section>
+    </main>
+    <footer><span>STILLWATCH · SPORT PRACTICE ESTIMATES</span><span>CAMERA ANALYSIS RUNS IN YOUR BROWSER</span></footer>
+  </div>
+</body>
+</html>

@@ -23,6 +23,7 @@ const ui = {
   sportStanceRow: $('sportStanceRow'),
   sportMetrics: $('sportMetrics'),
   sportDescription: $('sportDescription'),
+  sportGuide: $('sportGuide'),
   chinStatus: $('chinStatus'),
   roundDuration: $('roundDuration'),
   roundStart: $('roundStart'),
@@ -31,6 +32,7 @@ const ui = {
   roundResult: $('roundResult'),
   roundScore: $('roundScore'),
   roundActivity: $('roundActivity'),
+  roundScoreMeaning: $('roundScoreMeaning'),
   roundTips: $('roundTips'),
   handsStatus: $('handsStatus'),
   startButton: $('startBtn'),
@@ -142,6 +144,16 @@ function renderSportStats() {
     });
   }
   if (ui.sportDescription.textContent!==sportTracker.explanation) ui.sportDescription.textContent=sportTracker.explanation;
+  const guide=[...sportTracker.dataGuide,'Round score blends the measured quality estimate (65%) with an activity estimate (35%). Activity is based on sport-specific counts and capped at 100; if no quality measure is available, the score uses activity only.'];
+  const currentGuide=[...ui.sportGuide.children].map(item=>item.textContent);
+  if(JSON.stringify(currentGuide)!==JSON.stringify(guide)) {
+    ui.sportGuide.replaceChildren();
+    for(const description of guide) {
+      const item=document.createElement('li');
+      item.textContent=description;
+      ui.sportGuide.append(item);
+    }
+  }
   ui.sportStanceRow.hidden=sportTracker.sport!=='Boxing';
 }
 
@@ -185,6 +197,7 @@ function finishPracticeRound() {
   ui.roundClock.textContent=`${practiceRound.duration}-second round complete`;
   ui.roundScore.textContent=String(report.score);
   ui.roundActivity.textContent=report.activityText;
+  ui.roundScoreMeaning.textContent=report.scoreMeaning;
   ui.roundTips.replaceChildren();
   for(const tip of report.tips) {
     const item=document.createElement('li');

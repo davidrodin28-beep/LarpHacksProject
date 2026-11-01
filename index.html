@@ -11,7 +11,7 @@
   <div class="app">
     <header class="topbar">
       <div class="brand"><div class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7.5h3l1.6-2h8.8l1.6 2h3v11H3z"/><circle cx="12" cy="13" r="4"/><path d="M12 9v4l2 1"/></svg></div>Stillwatch</div>
-      <div class="top-meta"><span id="clock">--:--:--</span><span class="privacy"><i></i> LOCAL PROCESSING</span></div>
+      <div class="top-meta"><span id="clock">--:--:--</span><span class="privacy"><i></i> LOCAL PROCESSING</span><!-- ACCOUNT_SLOT --></div>
     </header>
     <section class="heading"><div><div class="eyebrow">Camera pose analysis</div><h1>Motion tracker</h1><p>Track your head, shoulders, elbows, wrists, and hands. Video stays on this device.</p></div><div class="heading-right"><button class="btn" id="snapshotBtn" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Save snapshot</button><button class="btn" id="resetBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5"/></svg>Reset data</button></div></section>
     <main class="layout">
@@ -32,6 +32,7 @@
           <label class="source sport-stance" id="sportStanceRow" for="sportStance">Stance <select id="sportStance"><option value="Left">Orthodox · left jab</option><option value="Right">Southpaw · right jab</option></select></label>
           <div class="sport-metrics metric-grid" id="sportMetrics" aria-live="polite"></div>
           <p class="helper sport-description" id="sportDescription"></p>
+          <details class="sport-guide"><summary>What these stats mean</summary><ul id="sportGuide"></ul></details>
           <div class="chin-readout" aria-live="polite"><span>CHIN POSITION</span><strong id="chinStatus">Face camera during the round setup</strong></div>
           <div class="practice-round" id="practiceRound">
             <div class="round-heading"><span>Timed practice</span><small>CAMERA COACHING ESTIMATE</small></div>
@@ -44,6 +45,8 @@
             <section class="round-result" id="roundResult" hidden aria-live="polite">
               <div class="round-score"><strong id="roundScore">0</strong><span>/ 100</span></div>
               <p class="round-activity" id="roundActivity"></p>
+              <p class="round-score-meaning"><strong>Score meaning:</strong> <span id="roundScoreMeaning"></span></p>
+              <div class="round-insight-label">IMPROVEMENT INSIGHTS</div>
               <ul id="roundTips"></ul>
             </section>
             <p class="helper">Hold a relaxed neutral pose during the short countdown. Each round gives a movement score and one or two measurable practice cues. This is not professional coaching.</p>

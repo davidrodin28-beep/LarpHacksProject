@@ -4,13 +4,16 @@ A browser motion tracker and playful sports practice dashboard. It estimates mov
 
 ## Run it
 
-Camera access works on `localhost` or a secure HTTPS page. From this folder, run:
+Python 3.11+ is required. From PowerShell in this folder, install and start the account-enabled app:
 
 ```powershell
-py -m http.server 8000
+py -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+py server.py
 ```
 
-Then open [http://localhost:8000](http://localhost:8000), choose a sport, and select **Start camera**. Allow camera access when your browser asks. On first use, the browser downloads the MediaPipe runtime and pose/hand/face model files; those are used for local processing. Internet access is needed for that first download. Press `Ctrl+C` in the PowerShell window to stop the local server.
+Open [http://localhost:8000](http://localhost:8000), create an account, then select a sport and **Start camera**. Camera access works on `localhost` or a secure HTTPS page. Allow camera access when your browser asks. On first use, the browser downloads the MediaPipe runtime and pose/hand/face model files; those are used for local processing. Internet access is needed for that first download. Press `Ctrl+C` in the PowerShell window to stop the local server. Local accounts are stored in `instance/stillwatch.sqlite3`.
 
 Hand setup defaults to Both hands. After camera permission, step into view and hold still briefly; the tracker enrolls the visible hand or hands after several detections and starts by itself. There is no fist/open gesture or confirmation step. Choose One hand before starting if you only want one hand enrolled. Keep your upper body visible for arm-based sports; keep your full body in frame for jump, running, and kick estimates.
 
@@ -41,6 +44,10 @@ Automatic movement counters replace the 6-7 counter:
 - Ear-to-shoulder tilts: face the camera and start upright. Each lean toward a shoulder counts once; moving across to the other shoulder counts again. This uses pose ear landmarks, ear-to-shoulder distances normalized by shoulder width, and head roll relative to the shoulders. Ear markers and connecting lines are visible on the overlay.
 
 Pause analysis pauses counters; Reset data clears totals. Low-confidence or missing joints suspend the corresponding counter. A side view is useful for arm angles; use a front view for neck tilts. These are camera estimates, and occlusion or perspective can affect counts.
+
+## Render deployment
+
+This account-enabled app needs a Python **Web Service**, not a Static Site. Use the GitHub branch containing this version, set the build command to `pip install -r requirements.txt`, and the start command to `gunicorn 'server:create_app()' --bind 0.0.0.0:$PORT --workers 1`. Set `APP_ENV=production` and a long random `SECRET_KEY`; `/health` is the health check path. For accounts to survive restarts, configure `DATABASE_PATH` to persistent storage. SQLite on Render needs a paid persistent disk mounted at `/var/data`, with `DATABASE_PATH=/var/data/stillwatch.sqlite3`. Free web services lose local files on restarts and spin-down, and cannot use persistent disks. Free Render Postgres databases expire after 30 days. Do not use free service local SQLite for real accounts.
 
 ## Code layout
 
