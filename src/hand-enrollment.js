@@ -1,3 +1,4 @@
+import { matchHands } from './hand-matcher.js';
 const FINGERS = [[8, 6], [12, 10], [16, 14], [20, 18]];
 
 function classifyHand(landmarks) {
@@ -17,6 +18,7 @@ function classifyHand(landmarks) {
 
 export class HandEnrollment {
   constructor() {
+    this.expectedHands = 2;
     this.calibrating = false;
     this.tracks = [];
     this.targets = [];
@@ -50,7 +52,7 @@ export class HandEnrollment {
       if ((side !== 'Left' && side !== 'Right') || !wrist) return;
 
       let match = null;
-      let bestDistance = 0.18;
+      let bestDistance = 0.35;
       for (const track of this.tracks) {
         if (claimed.has(track.id) || track.side !== side || timestamp - track.lastSeen > 1100) continue;
         const distance = Math.hypot(track.x - wrist.x, track.y - wrist.y);
@@ -79,39 +81,43 @@ export class HandEnrollment {
     });
   }
 
-  autoReady(now) {
-    const selected = this.tracks.filter(t => t.selected && now-t.lastSeen < 700);
-    const waiting = this.tracks.some(t => t.sawFist && !t.selected && now-t.lastSeen < 700);
-    return selected.length > 0 && !waiting && now-this.selectionChangedAt >= 2500;
-  }
-
-  get canConfirm() {
-    return this.tracks.some((track) => track.selected);
-  }
-
-  get statusMessage() {
-    const selected = this.tracks.filter((track) => track.selected);
-    const waitingForOpen = this.tracks.some((track) => track.sawFist && !track.selected);
-    if (selected.length) {
-      const names = selected.map(({ side }) => `${side} hand`).join(' + ');
-      return `${names} selected${waitingForOpen ? ' · open your fist' : ''} · starting automatically${selected.length < 2 ? '; add another hand now' : ''}`;
+  selectedTracks(now = performance.now()) {
+    const bySide = new Map();
+    for(const track of this.tracks) {
+      if(!track.selected || now-track.lastSeen>700)continue;
+      if(!bySide.has(track.side)||bySide.get(track.side).lastSeen<track.lastSeen)bySide.set(track.side,track);
     }
-    return waitingForOpen ? 'Fist detected — now open your hand' : 'Make a fist, then open it';
+    return [...bySide.values()].slice(0,this.expectedHands);
   }
-
-  confirm() {
-    this.targets = this.tracks
-      .filter((track) => track.selected)
-      .map(({ id, side, x, y }) => ({ id, side, x, y }));
-    if (this.targets.length) this.calibrating = false;
-    return this.targets.length > 0;
+  autoReady(now) {
+    return this.selectedTracks(now).length === this.expectedHands && now-this.selectionChangedAt>=1200;
+  }
+  get statusMessage() {
+    const selected=this.selectedTracks();
+    return selected.length===this.expectedHands
+      ? `${selected.length}/${this.expectedHands} hands selected — starting automatically`
+      : `${selected.length}/${this.expectedHands} selected — make a fist, then open the remaining hand(s)`;
+  }
+  confirm(poseResult, now=performance.now()) {
+    const pose=poseResult?.landmarks?.[0] || [];
+    const selected=this.selectedTracks(now);
+    if(selected.length!==this.expectedHands)return false;
+    this.targets=selected.map(({id,side,x,y})=>{
+      const anchors=[15,16].filter(i=>pose[i]&&(pose[i].visibility??0)>=.55)
+        .map(i=>({i,d:Math.hypot(pose[i].x-x,pose[i].y-y)})).sort((a,b)=>a.d-b.d);
+      const first=anchors[0],second=anchors[1];
+      const poseIndex=first && first.d<.18 && (!second || second.d-first.d>.06) ? first.i : null;
+      return {id,side,x,y,poseIndex,lastSeen:now,vx:0,vy:0};
+    });
+    this.calibrating=false;
+    return true;
   }
 
   get selectedSides() {
     return [...new Set(this.targets.map(({ side }) => side))];
   }
 
-  visibleHands(handResult, poseResult) {
+  visibleHands(handResult, poseResult, now = performance.now()) {
     const hands = handResult?.landmarks || [];
     const handedness = handResult?.handedness || [];
     const pose = poseResult?.landmarks?.[0] || [];
@@ -131,26 +137,7 @@ export class HandEnrollment {
 
     if (this.calibrating) return candidates;
 
-    const remaining = [...candidates];
-    const matched = [];
-    for (const target of this.targets) {
-      let bestIndex = -1;
-      let bestDistance = 0.35;
-      for (let index = 0; index < remaining.length; index += 1) {
-        const hand = remaining[index];
-        if (hand.side !== target.side) continue;
-        const distance = Math.hypot(hand.x - target.x, hand.y - target.y);
-        if (distance < bestDistance) {
-          bestDistance = distance;
-          bestIndex = index;
-        }
-      }
-      if (bestIndex < 0) continue;
-      const [hand] = remaining.splice(bestIndex, 1);
-      target.x = target.x * 0.35 + hand.x * 0.65;
-      target.y = target.y * 0.35 + hand.y * 0.65;
-      matched.push({...hand,trackId:target.id});
-    }
+    const matched = matchHands(this.targets,candidates,pose,now);
 
     if (!matched.length) return [];
     const nearest = matched.reduce((closest, hand) => hand.depth < closest.depth ? hand : closest, matched[0]);
