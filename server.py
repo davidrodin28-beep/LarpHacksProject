@@ -12,6 +12,7 @@ from datetime import timedelta
 from flask import Flask, abort, g, redirect, render_template, request, send_from_directory, session, url_for
 from authlib.integrations.flask_client import OAuth
 from twilio.rest import Client as TwilioClient
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import check_password_hash, generate_password_hash
 
 ROOT = Path(__file__).resolve().parent
@@ -31,6 +32,9 @@ def create_app(test_config=None):
     )
     if test_config:
         app.config.update(test_config)
+    # Render terminates HTTPS at its proxy; trust its forwarded host and scheme
+    # so OAuth callbacks are generated with the public HTTPS URL.
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
     if not app.config['SECRET_KEY']:
         if production:
             raise RuntimeError('Set SECRET_KEY in production.')
