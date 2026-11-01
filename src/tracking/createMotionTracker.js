@@ -5,6 +5,7 @@ import { OverlayRenderer } from '../overlay-renderer.js';
 import { MotionMeter } from '../motion-meter.js';
 import { MovementCounter } from '../movement-counter.js';
 import { INFERENCE_INTERVAL_MS } from '../config.js';
+import { CoachSession } from '../coaching/coach.js';
 
 // Integration boundary: UI supplies elements and receives low-frequency status updates.
 // Detection, enrollment, drawing, motion measurement, and counting use the team's modules.
@@ -20,6 +21,7 @@ export function createMotionTracker({ video, canvas, stage, onStatus, onError },
   const enrollment = new Enrollment();
   const motion = new Meter();
   const counter = new Counter();
+  const coach = new CoachSession();
   let session = null;
   let frame = 0;
   let mirrored = true;
@@ -40,6 +42,7 @@ export function createMotionTracker({ video, canvas, stage, onStatus, onError },
       paused,
       canPause: !enrollment.calibrating,
       metrics: { ...sample, counts: { ...counter.counts }, duration: Date.now() - startedAt },
+      coaching: { ...coach.state },
     });
   }
 
@@ -65,6 +68,7 @@ export function createMotionTracker({ video, canvas, stage, onStatus, onError },
     paused = false;
     enrollment.reset();
     counter.resetGesture();
+    coach.reset();
     renderer.clear();
   }
 
@@ -84,6 +88,7 @@ export function createMotionTracker({ video, canvas, stage, onStatus, onError },
             } else {
               const hands = enrollment.visibleHands(results.hands, results.pose);
               counter.sample(results.pose, hands, now, video.videoWidth / video.videoHeight);
+              coach.sample(results.pose, now, video.videoWidth / video.videoHeight);
             }
           }
           sample = motion.sample(video, threshold);
@@ -172,9 +177,27 @@ export function createMotionTracker({ video, canvas, stage, onStatus, onError },
       if (!session?.ready || enrollment.calibrating) return;
       paused = !paused;
       counter.resetGesture();
+      coach.suspend();
       publish();
     },
     setThreshold(value) { threshold = value; },
+    selectLesson(sport, index) {
+      coach.select(sport, index);
+      if (session?.ready) publish();
+    },
+    setCoachingStance(stance) {
+      coach.setStance(stance);
+      if (session?.ready) publish();
+    },
+    startLesson() {
+      if (!session?.ready || enrollment.calibrating || paused) return;
+      coach.start();
+      publish();
+    },
+    endLesson() {
+      coach.reset();
+      if (session?.ready) publish();
+    },
     async snapshot() {
       if (!session?.ready || video.readyState < 2) throw new Error('Wait for tracking to finish loading before saving.');
       const output = document.createElement('canvas');

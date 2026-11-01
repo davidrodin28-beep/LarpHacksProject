@@ -53,8 +53,18 @@ Run checks:
 
 ```sh
 python3 -m unittest discover -s tests -v
-node --experimental-vm-modules --test tests/auth-flow.test.mjs
+node --experimental-vm-modules --test tests/auth-flow.test.mjs tests/coaching.test.mjs
 ```
+
+## Guided coaching
+
+In the studio, choose a sport and a move. Each of the six sports has two beginner lessons with form cues, a practice drill, and a technique tip. Lessons can be read without camera access. Enable the camera, complete hand setup, and choose **Start guided practice** for live upper-body position prompts. Boxing includes Orthodox and Southpaw choices so jab and cross checkpoints use the appropriate arm.
+
+Practice walks through the positions in order. A checkpoint advances after 800 ms of continuous matching observations. Low-confidence, cropped, or missing shoulders/elbows/wrists interrupt the hold. Pausing clears the partial hold and retains the checkpoint; changing the sport, move, or stance resets the lesson. Turning off the camera ends practice. Completed drills can be repeated. Video and coaching run in the browser without an additional service or API key.
+
+These are slow, equipment-free position rehearsals, not full-speed technique evaluations. Checks use aspect-corrected 2D landmarks, so face your chest toward the camera and keep both arms visible; angle extended arms slightly across the image for depth-heavy movements. The coach can estimate arm height, bend, reach direction, and hand proximity. It cannot verify ball contact, grip, force, footwork, body rotation, or complete sporting technique. Completion confirms the position checkpoints only. Read each lesson’s cues and camera limits for the unmeasured details.
+
+Lesson references: [Jr. NBA shooting fundamentals](https://jr.nba.com/shooting/), [USTA serving basics](https://www.usta.com/en/home/improve/tips-and-instruction/national/learning-the-basics--serve.html), [USA Archery shooting steps](https://www.usarchery.org/resources/explore-archery-example-activity---outer-ring-challenge-250319085534.pdf), [England Boxing coaching handbook](https://www.englandboxing.org/wp-content/uploads/2022/03/Level-2-Coaching-Handbook-compressed.pdf), [Table Tennis England ready position](https://newsarchive.tabletennisengland.co.uk/news/archived/coaching-grip-ready-position/), and [USA Volleyball passing](https://usavolleyball.org/resource/five-keys-to-better-passing/). The camera thresholds are app heuristics, not governing-body technique standards.
 
 Hand setup defaults to Both hands and waits until each completes the fist-to-open gesture. It starts automatically after both are selected and visible for the selection countdown (1.2 seconds since the last enrollment). Choose One hand intentionally when needed. Re-select hands restarts setup without clearing repetition totals.
 
