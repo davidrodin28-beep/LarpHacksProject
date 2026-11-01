@@ -1,0 +1,51 @@
+# Local configuration and credentials (sanitized examples may be committed)
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.key
+*.pem
+
+# Local account database, signing secret, and SQLite sidecar files
+/instance/
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+
+# Python environments, bytecode, and tool caches
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Installed dependencies and generated output
+node_modules/
+dist/
+build/
+coverage/
+*.egg-info/
+*.log
+
+# Local editor and operating-system files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
