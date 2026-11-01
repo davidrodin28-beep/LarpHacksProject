@@ -16,7 +16,10 @@ ROOT = Path(__file__).resolve().parent
 
 def create_app(test_config=None):
     app = Flask(__name__, static_folder=None)
-    production = os.environ.get('APP_ENV') == 'production'
+    on_render = os.environ.get('RENDER') == 'true'
+    production = on_render or os.environ.get('APP_ENV') == 'production'
+    if on_render and not os.environ.get('DATABASE_PATH') and not test_config:
+        raise RuntimeError('Set DATABASE_PATH to a file on your Render persistent disk.')
     app.config.update(
         DATABASE=os.environ.get('DATABASE_PATH', str(ROOT / 'instance' / 'stillwatch.sqlite3')),
         SECRET_KEY=os.environ.get('SECRET_KEY'),

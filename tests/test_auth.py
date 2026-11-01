@@ -1,5 +1,7 @@
 from contextlib import closing
 import sqlite3
+import os
+from unittest.mock import patch
 import tempfile
 import time
 import unittest
@@ -106,6 +108,20 @@ class AccountTests(unittest.TestCase):
         for path in ('/styles.css', '/src/app.js'):
             with self.client.get(path) as response:
                 self.assertEqual(response.status_code, 200)
+
+    def test_render_enforces_production_configuration(self):
+        with patch.dict(os.environ, {'RENDER': 'true', 'DATABASE_PATH': self.database, 'SECRET_KEY': 'test-render-secret'}, clear=True):
+            app = create_app()
+            cookie = app.test_client().get('/login').headers['Set-Cookie']
+            self.assertIn('Secure', cookie)
+            self.assertEqual(app.config['DATABASE'], self.database)
+            self.assertEqual(app.test_client().get('/health').json, {'status': 'ok'})
+        with patch.dict(os.environ, {'RENDER': 'true'}, clear=True):
+            with self.assertRaisesRegex(RuntimeError, 'DATABASE_PATH'):
+                create_app()
+        with patch.dict(os.environ, {'RENDER': 'true', 'DATABASE_PATH': self.database}, clear=True):
+            with self.assertRaisesRegex(RuntimeError, 'SECRET_KEY'):
+                create_app()
 
     def test_pages_escape_values_and_use_secure_production_cookie(self):
         response = self.signup(name='<script>alert(1)</script>', confirm_password='mismatch')

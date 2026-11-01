@@ -1,0 +1,22 @@
+# Uses a paid service because SQLite needs a persistent disk.
+# For an existing service, apply these settings in its Render dashboard.
+services:
+  - type: web
+    name: stillwatch
+    runtime: python
+    plan: starter
+    numInstances: 1
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --config gunicorn.conf.py wsgi:app
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_PATH
+        value: /var/data/stillwatch.sqlite3
+    disk:
+      name: stillwatch-data
+      mountPath: /var/data
+      sizeGB: 1

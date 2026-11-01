@@ -31,19 +31,33 @@ Run tests:
 python -m unittest discover -s tests -v
 ```
 
-### Later: Render hosting
+### Render hosting
 
-This is prepared for a Python web service, but has not been deployed. Use these settings:
+Run the frontend and authentication together as a **Python Web Service**. A Static Site or `python -m http.server` cannot handle login/logout POST requests.
 
-- Build command: `pip install -r requirements.txt`
-- Start command: `gunicorn 'server:create_app()' --bind 0.0.0.0:$PORT --workers 1`
-- Health check: `/health`
-- Environment: `APP_ENV=production`, `SECRET_KEY=<a long random secret>`, and `DATABASE_PATH=/var/data/stillwatch.sqlite3`.
-- Attach a persistent disk at `/var/data` before using SQLite on Render. Ordinary service files are ephemeral; the local development database is not uploaded. SQLite with a disk is intended for a single service instance. Move to managed PostgreSQL before scaling across instances.
+`render.yaml` provides a Blueprint with a paid Starter service and a 1 GB persistent disk. For an existing service, apply these settings in its Render dashboard; adding a YAML file does not automatically update a manually configured service:
 
-Production enables Secure cookies, so serve it over HTTPS. Generate a production secret with `python -c "import secrets; print(secrets.token_hex(32))"` and enter it in Render's environment settings. Keep it out of Git.
+| Setting | Value |
+| --- | --- |
+| Runtime | Python |
+| Build command | `pip install -r requirements.txt` |
+| Start command | `gunicorn --config gunicorn.conf.py wsgi:app` |
+| Health check | `/health` |
+| Instances | 1 |
+| Disk mount path | `/var/data` |
+| `APP_ENV` | `production` |
+| `DATABASE_PATH` | `/var/data/stillwatch.sqlite3` |
+| `SECRET_KEY` | A stable random secret stored in Render environment settings |
 
-See [Render’s Flask deployment guide](https://render.com/docs/deploy-flask), [persistent disk documentation](https://render.com/docs/disks), and [Flask’s security guidance](https://flask.palletsprojects.com/en/stable/web-security/).
+Deploy the branch containing `server.py`, `wsgi.py`, `templates/`, and `requirements.txt`. Replace the static-server start command. If the existing resource is a Static Site, create a Python Web Service and use its URL. Flask must serve both the UI and account routes on the same origin.
+
+Gunicorn binds to Render's `PORT` on `0.0.0.0`. Render detection enables Secure cookies and requires a database path and signing secret. The Blueprint generates the secret automatically. For manual setup, generate one with `python -c "import secrets; print(secrets.token_hex(32))"`. Keep it stable across deployments and out of Git.
+
+Attach the persistent disk before deployment. SQLite is created on first boot; local accounts are not uploaded. Persistent disks require paid services. Ordinary Render files are ephemeral, so accounts would be lost on restart without persistent storage. Use one service instance with SQLite; migrate to managed PostgreSQL before horizontal scaling.
+
+After deployment, check `/health` for `{"status":"ok"}`, then test signup, logout, and login. Redeploy and verify the account still works. Local development remains `python server.py` with storage in `instance/`.
+
+See [Render’s Flask guide](https://render.com/docs/deploy-flask), [Blueprint reference](https://render.com/docs/blueprint-spec), and [persistent disk documentation](https://render.com/docs/disks).
 
 Hand setup defaults to Both hands and waits until each completes the fist-to-open gesture. It starts automatically after both are selected and visible for the selection countdown (1.2 seconds since the last enrollment). Choose One hand intentionally when needed. Re-select hands restarts setup without clearing repetition totals.
 
