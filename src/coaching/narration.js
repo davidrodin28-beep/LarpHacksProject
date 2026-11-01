@@ -38,7 +38,7 @@ export function sportInstructions(sport) {
 }
 
 export class VoiceNarrator {
-  constructor({ endpoint, getToken, onStatus = () => {}, fetcher = fetch,
+  constructor({ endpoint, getToken, onStatus = () => {}, fetcher = (url, options) => fetch(url, options),
     createAudio = url => new Audio(url), urls = URL }) {
     Object.assign(this, { endpoint, getToken, onStatus, fetcher, createAudio, urls });
     this.cache = new Map();

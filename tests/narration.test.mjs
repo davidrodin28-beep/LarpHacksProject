@@ -3,19 +3,24 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { readFile } from 'node:fs/promises';
 
-const context = vm.createContext({ AbortController, setTimeout, clearTimeout });
+const context = vm.createContext({ AbortController, setTimeout, clearTimeout,
+  fetch: function () {
+    assert.equal(this, undefined, 'Browser fetch must be called without a narrator instance as its receiver.');
+    return Promise.resolve({ ok: true, blob: async () => ({ audio: true }) });
+  },
+});
 const module = new vm.SourceTextModule(await readFile(new URL('../src/coaching/narration.js', import.meta.url), 'utf8'), { context });
 await module.link(() => { throw new Error('Narration must stay independent of tracking and React.'); });
 await module.evaluate();
 const { VoiceNarrator, speechChunks, coachingNarration, lessonInstructions, sportInstructions } = module.namespace;
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
-function fixture({ fetcher, autoFinish = true, token = 'session-token' } = {}) {
+function fixture({ fetcher, autoFinish = true, token = 'session-token', defaultFetch = false } = {}) {
   const calls = [], audios = [], statuses = [], revoked = [];
   const narrator = new VoiceNarrator({
     endpoint: 'https://engine.example/speech', getToken: async () => token,
     onStatus: status => statuses.push(status),
-    fetcher: fetcher || (async (url, options) => {
+    fetcher: defaultFetch ? undefined : fetcher || (async (url, options) => {
       calls.push({ url, options });
       return { ok: true, blob: async () => ({ audio: true }) };
     }),
@@ -31,6 +36,13 @@ function fixture({ fetcher, autoFinish = true, token = 'session-token' } = {}) {
   });
   return { narrator, calls, audios, statuses, revoked };
 }
+
+test('the default browser fetch is called with a valid receiver', async () => {
+  const f = fixture({ defaultFetch: true });
+  await f.narrator.speak('Keep your hands up.');
+  assert.equal(f.audios.length, 1);
+  assert.equal(f.statuses.at(-1), '');
+});
 
 test('voice uses the backend and session token, then replays cached audio', async () => {
   const f = fixture();
