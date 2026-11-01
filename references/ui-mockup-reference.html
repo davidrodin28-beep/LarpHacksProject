@@ -1,0 +1,195 @@
+<style>
+  #sw-simple {
+    --sw-bg: light-dark(#f7f8f3, #10140f);
+    --sw-panel: light-dark(#edf0e7, #192016);
+    --sw-ink: light-dark(#20261b, #f1f4e8);
+    --sw-muted: light-dark(#68705f, #a0ad94);
+    --sw-line: light-dark(#d5ddca, #303c28);
+    --sw-accent: light-dark(#c2ec75, #c2ec75);
+    --sw-accent-ink: #1b2710;
+    --sw-court: light-dark(#e3ead9, #141d10);
+    color: var(--sw-ink);
+    background: var(--sw-bg);
+    font: 400 14px/1.5 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    border-radius: 14px;
+    overflow: hidden;
+    width: 100%;
+  }
+  #sw-simple * { box-sizing: border-box; }
+  #sw-simple [hidden] { display: none !important; }
+  #sw-simple button, #sw-simple select { font: inherit; }
+  #sw-simple .sw-shell { padding: 0 36px; }
+  #sw-simple .sw-top { height: 76px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--sw-line); padding-right: 82px; gap: 16px; }
+  #sw-simple .sw-brand { display: flex; align-items: center; gap: 9px; font-size: 21px; font-weight: 500; letter-spacing: -.9px; }
+  #sw-simple .sw-brand svg { width: 23px; height: 23px; }
+  #sw-simple .sw-nav-label { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--sw-muted); }
+  #sw-simple .sw-intro { min-height: 460px; display: grid; grid-template-columns: 1.1fr .9fr; gap: 30px; align-items: center; padding: 55px 0; }
+  #sw-simple .sw-kicker { font-size: 11px; letter-spacing: 1.8px; text-transform: uppercase; color: var(--sw-muted); }
+  #sw-simple .sw-intro h1 { margin: 18px 0; font-size: clamp(48px, 6.5vw, 78px); line-height: 1.02; letter-spacing: -4px; font-weight: 500; color: var(--sw-ink); }
+  #sw-simple .sw-intro h1 em { font-weight: 400; font-family: Georgia, serif; }
+  #sw-simple .sw-intro p { color: var(--sw-muted); font-size: 15px; line-height: 1.8; margin: 0 0 27px; }
+  #sw-simple .sw-button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid var(--sw-line); padding: 10px 15px; min-height: 43px; border-radius: 7px; color: var(--sw-ink); background: transparent; font-size: 12px; font-weight: 500; }
+  #sw-simple .sw-button svg { width: 16px; height: 16px; }
+  #sw-simple .sw-button:hover { background: var(--sw-panel); }
+  #sw-simple .sw-primary { color: var(--sw-accent-ink); background: var(--sw-accent); border-color: var(--sw-accent); }
+  #sw-simple .sw-primary:hover { background: var(--sw-accent); filter: brightness(1.06); }
+  #sw-simple .sw-start { padding: 13px 22px; min-width: 142px; font-size: 14px; }
+  #sw-simple .sw-start svg { margin-left: 20px; }
+  #sw-simple .sw-art { position: relative; aspect-ratio: 1; background: var(--sw-court); border-radius: 50%; display: grid; place-items: center; max-width: 340px; width: 100%; justify-self: end; }
+  #sw-simple .sw-art::before { content: ''; position: absolute; inset: 22px; border: 1px solid var(--sw-line); border-radius: 50%; }
+  #sw-simple .sw-art::after { content: ''; position: absolute; left: 20%; right: 20%; bottom: 18%; height: 1px; background: var(--sw-line); }
+  #sw-simple .sw-pose { width: 82%; height: 82%; position: relative; z-index: 1; color: var(--sw-ink); }
+  #sw-simple .sw-pose .sw-bone { stroke: currentColor; stroke-width: 2; stroke-linecap: round; fill: none; }
+  #sw-simple .sw-pose .sw-joint { fill: var(--sw-bg); stroke: currentColor; stroke-width: 1.5; }
+  #sw-simple .sw-pose .sw-ball { fill: var(--sw-accent); stroke: var(--sw-accent-ink); stroke-width: 1; }
+  #sw-simple .sw-art-caption { position: absolute; bottom: 5px; color: var(--sw-muted); font-size: 11px; padding: 4px 10px; background: var(--sw-bg); border-radius: 20px; z-index: 2; }
+  #sw-simple .sw-footer { display: flex; justify-content: space-between; gap: 15px; padding: 20px 0 24px; border-top: 1px solid var(--sw-line); color: var(--sw-muted); font-size: 11px; }
+  #sw-simple .sw-privacy { display: flex; gap: 6px; align-items: center; }
+  #sw-simple .sw-privacy svg { width: 12px; height: 12px; }
+  #sw-simple .sw-studio { padding: 25px 0 27px; }
+  #sw-simple .sw-studio-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; gap: 16px; }
+  #sw-simple .sw-back { display: flex; align-items: center; gap: 6px; padding: 0; border: 0; background: transparent; color: var(--sw-muted); font-size: 12px; min-height: 32px; }
+  #sw-simple .sw-back svg { width: 14px; height: 14px; }
+  #sw-simple .sw-sport-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  #sw-simple .sw-sport-controls label { color: var(--sw-muted); font-size: 12px; margin-right: 4px; }
+  #sw-simple select { background: var(--sw-panel); color: var(--sw-ink); border: 1px solid var(--sw-line); border-radius: 7px; padding: 10px 26px 10px 12px; min-height: 43px; font-size: 12px; }
+  #sw-simple .sw-camera { position: relative; aspect-ratio: 16/9; background: var(--sw-court); border: 1px solid var(--sw-line); border-radius: 11px; display: grid; place-items: center; overflow: hidden; }
+  #sw-simple .sw-camera .sw-pose { width: auto; height: 80%; opacity: .75; }
+  #sw-simple .sw-camera-caption { position: absolute; left: 18px; top: 15px; font-size: 11px; color: var(--sw-muted); display: flex; align-items: center; gap: 7px; }
+  #sw-simple .sw-camera-caption svg { width: 13px; height: 13px; }
+  #sw-simple .sw-preview-label { position: absolute; right: 16px; bottom: 13px; font-size: 11px; color: var(--sw-muted); }
+  #sw-simple .sw-studio-bottom { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 17px; }
+  #sw-simple .sw-instruction { margin: 0; font-size: 13px; color: var(--sw-muted); }
+  #sw-simple .sw-instruction strong { font-weight: 500; color: var(--sw-ink); }
+  #sw-simple .sw-snapshot { white-space: nowrap; }
+  #sw-simple .sw-capture { padding: 17px; margin-top: 18px; background: var(--sw-panel); border: 1px solid var(--sw-line); border-radius: 9px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+  #sw-simple .sw-capture-info { display: flex; align-items: center; gap: 12px; }
+  #sw-simple .sw-capture-info > svg { width: 34px; height: 34px; color: var(--sw-muted); }
+  #sw-simple .sw-capture strong { display: block; font-weight: 500; font-size: 13px; }
+  #sw-simple .sw-capture small { color: var(--sw-muted); font-size: 11px; }
+  #sw-simple .sw-flash { animation: sw-capture-flash .4s ease-out; }
+  @keyframes sw-capture-flash { from { opacity: .3; } to { opacity: 1; } }
+  @media(max-width: 650px) {
+    #sw-simple .sw-shell { padding: 0 21px; }
+    #sw-simple .sw-top { height: 65px; padding-right: 60px; }
+    #sw-simple .sw-nav-label { display: none; }
+    #sw-simple .sw-intro { grid-template-columns: 1fr; gap: 30px; padding: 38px 0 35px; text-align: center; min-height: auto; }
+    #sw-simple .sw-intro h1 { font-size: 55px; letter-spacing: -3px; }
+    #sw-simple .sw-intro p { font-size: 14px; }
+    #sw-simple .sw-art { max-width: 230px; justify-self: center; }
+    #sw-simple .sw-footer { flex-wrap: wrap; justify-content: center; gap: 8px 20px; }
+    #sw-simple .sw-studio-head { flex-direction: column; align-items: start; gap: 10px; }
+    #sw-simple .sw-sport-controls { width: 100%; }
+    #sw-simple .sw-sport-controls select { flex: 1; font-size: 16px; min-width: 110px; width: 110px; padding-right: 10px; }
+    #sw-simple .sw-sport-controls label { width: 100%; }
+    #sw-simple .sw-camera { aspect-ratio: 4/3; }
+    #sw-simple .sw-camera-caption { top: 12px; left: 12px; }
+    #sw-simple .sw-studio-bottom { flex-direction: column; align-items: stretch; gap: 14px; }
+    #sw-simple .sw-snapshot { align-self: stretch; }
+    #sw-simple .sw-capture { flex-wrap: wrap; }
+  }
+  @media(prefers-reduced-motion:reduce) { #sw-simple .sw-flash { animation: none; } }
+</style>
+<div id="sw-simple">
+  <div class="sw-shell">
+    <header class="sw-top"><div class="sw-brand"><i data-lucide="scan-face" aria-hidden="true"></i><span>stillwatch</span></div><span class="sw-nav-label">Play someone else.</span></header>
+    <section class="sw-intro" data-screen="intro" aria-label="Intro screen">
+      <div>
+        <div class="sw-kicker">Your next alter ego</div>
+        <h1>Play the <em>part.</em></h1>
+        <p>Pick a sport. Step into frame.<br>See what you can pull off.</p>
+        <button class="sw-button sw-primary sw-start cursor-interaction" type="button" data-action="start">Start<i data-lucide="arrow-up-right" aria-hidden="true"></i></button>
+      </div>
+      <div class="sw-art">
+        <svg class="sw-pose" viewBox="0 0 300 300" role="img" aria-label="Illustrative body landmarks in a basketball pose">
+          <circle class="sw-ball" cx="222" cy="51" r="19"/>
+          <path d="M204 45q18 4 27 22m-26-29q-4 22 18 30M204 52h36" fill="none" stroke="var(--sw-accent-ink)" stroke-width="1"/>
+          <circle class="sw-bone" cx="138" cy="88" r="20"/>
+          <path class="sw-bone" d="m137 110-3 17m-29 6 58-10m-58 10-35-37 23-31m70 58 34-29 13-25m-102 65 5 62 39-2 7-68m-46 70-26 35-15 36m80-73 28 26 23 29m-99-55 39-2"/>
+          <g class="sw-joint"><circle cx="105" cy="133" r="4"/><circle cx="163" cy="123" r="4"/><circle cx="70" cy="96" r="4"/><circle cx="93" cy="65" r="4"/><circle cx="197" cy="94" r="4"/><circle cx="210" cy="69" r="4"/><circle cx="113" cy="196" r="4"/><circle cx="152" cy="194" r="4"/><circle cx="87" cy="231" r="4"/><circle cx="180" cy="220" r="4"/><circle cx="72" cy="267" r="4"/><circle cx="203" cy="249" r="4"/></g>
+        </svg>
+        <span class="sw-art-caption">Same you. Different game.</span>
+      </div>
+    </section>
+    <section class="sw-studio" data-screen="studio" aria-label="Camera workspace" hidden>
+      <div class="sw-studio-head">
+        <button class="sw-back cursor-interaction" type="button" data-action="back"><i data-lucide="arrow-left" aria-hidden="true"></i>Back</button>
+        <div class="sw-sport-controls">
+          <label for="sw-sport-choice">Your sport</label>
+          <select id="sw-sport-choice" class="cursor-interaction"><option>Basketball</option><option>Boxing</option><option>Tennis</option><option>Archery</option><option>Table tennis</option><option>Volleyball</option></select>
+          <button class="sw-button cursor-interaction" type="button" data-action="random"><i data-lucide="shuffle" aria-hidden="true"></i>Random</button>
+        </div>
+      </div>
+      <div class="sw-camera" data-camera>
+        <div class="sw-camera-caption"><i data-lucide="video" aria-hidden="true"></i>Camera preview</div>
+        <svg class="sw-pose" viewBox="0 0 500 350" role="img" aria-label="Sample head, shoulder, and hand tracking landmarks. Design preview, no camera access.">
+          <path d="M250 98c-22 0-40 18-40 40v32c0 20 18 37 40 37s40-17 40-37v-32c0-22-18-40-40-40ZM215 194l-7 35-72 26-21 80m170-141 7 35 72 26 21 80" fill="none" stroke="var(--sw-line)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M122 273 87 228m282 45 38-45" fill="none" stroke="var(--sw-line)" stroke-width="16" stroke-linecap="round"/>
+          <g fill="none" stroke="var(--sw-ink)" stroke-width="1.3" opacity=".7"><circle cx="250" cy="149" r="51"/><path d="m136 255 72-26h84l72 26M73 204l14 24 17-27m-17 27-12-43m12 43 1-46m-1 46 11-43m296 17 13 26 15-25m-15 25-9-43m9 43 2-46m-2 46 13-42"/></g>
+          <g fill="var(--sw-accent)" stroke="var(--sw-accent-ink)" stroke-width="1"><circle cx="232" cy="139" r="3"/><circle cx="268" cy="139" r="3"/><circle cx="250" cy="156" r="3"/><circle cx="250" cy="176" r="3"/><circle cx="136" cy="255" r="5"/><circle cx="364" cy="255" r="5"/><circle cx="87" cy="228" r="4"/><circle cx="73" cy="204" r="3"/><circle cx="104" cy="201" r="3"/><circle cx="75" cy="185" r="3"/><circle cx="88" cy="182" r="3"/><circle cx="98" cy="185" r="3"/><circle cx="407" cy="228" r="4"/><circle cx="394" cy="202" r="3"/><circle cx="422" cy="203" r="3"/><circle cx="398" cy="185" r="3"/><circle cx="409" cy="182" r="3"/><circle cx="420" cy="186" r="3"/></g>
+          <text x="250" y="77" text-anchor="middle" font-size="11" fill="var(--sw-muted)" font-family="monospace">HEAD + HANDS</text>
+        </svg>
+        <span class="sw-preview-label">Design preview · camera off</span>
+      </div>
+      <div class="sw-studio-bottom">
+        <p class="sw-instruction" data-prompt aria-live="polite"><strong>Basketball.</strong> Show us your best free throw.</p>
+        <button class="sw-button sw-primary sw-snapshot cursor-interaction" type="button" data-action="snapshot"><i data-lucide="camera" aria-hidden="true"></i>Save snapshot</button>
+      </div>
+      <div class="sw-capture" data-capture role="status" hidden><div class="sw-capture-info"><i data-lucide="image" aria-hidden="true"></i><div><strong>Snapshot preview</strong><small>Your captured frame will save to your device.</small></div></div><button class="sw-button cursor-interaction" type="button" data-action="dismiss">Close</button></div>
+    </section>
+    <footer class="sw-footer"><span class="sw-privacy"><i data-lucide="shield-check" aria-hidden="true"></i>Video stays on your device.</span><span>Pick a sport. Play the part.</span></footer>
+  </div>
+</div>
+<script>
+(() => {
+  const root = document.getElementById('sw-simple');
+  const intro = root.querySelector('[data-screen="intro"]');
+  const studio = root.querySelector('[data-screen="studio"]');
+  const choice = root.querySelector('#sw-sport-choice');
+  const prompt = root.querySelector('[data-prompt]');
+  const capture = root.querySelector('[data-capture]');
+  const camera = root.querySelector('[data-camera]');
+  const prompts = {
+    Basketball: 'Show us your best free throw.',
+    Boxing: 'Give us your best shadowboxing impression.',
+    Tennis: 'An imaginary racket. A championship serve.',
+    Archery: 'Draw your imaginary bow. Find your target.',
+    'Table tennis': 'Make that imaginary rally look dramatic.',
+    Volleyball: 'Set up the imaginary winning point.'
+  };
+  const updateSport = () => {
+    const name = choice.value;
+    const title = document.createElement('strong');
+    title.textContent = name + '. ';
+    prompt.replaceChildren(title, document.createTextNode(prompts[name]));
+    capture.hidden = true;
+  };
+  root.querySelector('[data-action="start"]').addEventListener('click', () => {
+    intro.hidden = true;
+    studio.hidden = false;
+  });
+  root.querySelector('[data-action="back"]').addEventListener('click', () => {
+    studio.hidden = true;
+    intro.hidden = false;
+    capture.hidden = true;
+  });
+  choice.addEventListener('change', updateSport);
+  root.querySelector('[data-action="random"]').addEventListener('click', () => {
+    const oldIndex = choice.selectedIndex;
+    let index = Math.floor(Math.random() * (choice.options.length - 1));
+    if (index >= oldIndex) index++;
+    choice.selectedIndex = index;
+    updateSport();
+  });
+  root.querySelector('[data-action="snapshot"]').addEventListener('click', () => {
+    capture.hidden = false;
+    camera.classList.remove('sw-flash');
+    void camera.offsetWidth;
+    camera.classList.add('sw-flash');
+  });
+  root.querySelector('[data-action="dismiss"]').addEventListener('click', () => {
+    capture.hidden = true;
+  });
+})();
+</script>
+
