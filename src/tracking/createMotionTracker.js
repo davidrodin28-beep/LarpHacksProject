@@ -4,6 +4,7 @@ import { HandEnrollment } from '../hand-enrollment.js';
 import { OverlayRenderer } from '../overlay-renderer.js';
 import { MotionMeter } from '../motion-meter.js';
 import { MovementCounter } from '../movement-counter.js';
+import { SportTracker } from '../sport-tracker.js';
 import { INFERENCE_INTERVAL_MS } from '../config.js';
 
 // Integration boundary: UI supplies elements and receives low-frequency status updates.
@@ -15,11 +16,13 @@ export function createMotionTracker({ video, canvas, stage, onStatus, onError },
   const Renderer = dependencies.OverlayRenderer || OverlayRenderer;
   const Meter = dependencies.MotionMeter || MotionMeter;
   const Counter = dependencies.MovementCounter || MovementCounter;
+  const Sport = dependencies.SportTracker || SportTracker;
   const selector = document.createElement('select');
   const renderer = new Renderer(video, canvas);
   const enrollment = new Enrollment();
   const motion = new Meter();
   const counter = new Counter();
+  const sport = new Sport();
   let session = null;
   let frame = 0;
   let mirrored = true;
@@ -35,11 +38,11 @@ export function createMotionTracker({ video, canvas, stage, onStatus, onError },
 
   function publish() {
     onStatus?.({
-      phase: enrollment.calibrating ? 'setup' : paused ? 'paused' : 'tracking',
+      phase: !session ? 'off' : !session.ready ? 'loading' : enrollment.calibrating ? 'setup' : paused ? 'paused' : 'tracking',
       instruction: enrollment.calibrating ? enrollment.statusMessage : '',
       paused,
       canPause: !enrollment.calibrating,
-      metrics: { ...sample, counts: { ...counter.counts }, duration: Date.now() - startedAt },
+      metrics: { ...sample, counts: { ...counter.counts }, sport: sport.metrics, sportExplanation: sport.explanation, duration: Date.now() - startedAt },
     });
   }
 
@@ -83,7 +86,9 @@ export function createMotionTracker({ video, canvas, stage, onStatus, onError },
               if (enrollment.autoReady(now) && enrollment.confirm()) counter.resetGesture();
             } else {
               const hands = enrollment.visibleHands(results.hands, results.pose);
-              counter.sample(results.pose, hands, now, video.videoWidth / video.videoHeight);
+              const aspect = video.videoWidth / video.videoHeight;
+              counter.sample(results.pose, hands, now, aspect);
+              sport.sample(results.pose, now, aspect);
             }
           }
           sample = motion.sample(video, threshold);
@@ -140,6 +145,7 @@ export function createMotionTracker({ video, canvas, stage, onStatus, onError },
       results = { pose: null, hands: null, face: null };
       motion.reset();
       counter.reset();
+      sport.reset();
       enrollment.begin();
       startedAt = Date.now();
       publish();
@@ -175,6 +181,16 @@ export function createMotionTracker({ video, canvas, stage, onStatus, onError },
       publish();
     },
     setThreshold(value) { threshold = value; },
+    setSport(value) { sport.setSport(value); publish(); },
+    setStance(value) { sport.setStance(value); publish(); },
+    setHandCount(value) {
+      enrollment.expectedHands = Number(value) === 1 ? 1 : 2;
+      if (session?.ready) {
+        enrollment.begin();
+        counter.resetGesture();
+        publish();
+      }
+    },
     async snapshot() {
       if (!session?.ready || video.readyState < 2) throw new Error('Wait for tracking to finish loading before saving.');
       const output = document.createElement('canvas');

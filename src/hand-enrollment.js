@@ -1,21 +1,4 @@
 import { matchHands } from './hand-matcher.js';
-const FINGERS = [[8, 6], [12, 10], [16, 14], [20, 18]];
-
-function classifyHand(landmarks) {
-  const wrist = landmarks[0];
-  let extended = 0;
-  let curled = 0;
-  for (const [tipIndex, pipIndex] of FINGERS) {
-    const tip = landmarks[tipIndex];
-    const pip = landmarks[pipIndex];
-    const tipDistance = Math.hypot(tip.x - wrist.x, tip.y - wrist.y);
-    const pipDistance = Math.hypot(pip.x - wrist.x, pip.y - wrist.y);
-    if (tipDistance > pipDistance * 1.16) extended += 1;
-    else if (tipDistance < pipDistance * 0.94) curled += 1;
-  }
-  return { open: extended >= 3, fist: curled >= 3 };
-}
-
 export class HandEnrollment {
   constructor() {
     this.expectedHands = 2;
@@ -63,7 +46,7 @@ export class HandEnrollment {
       }
 
       if (!match) {
-        match = { id: this.nextId++, side, x: wrist.x, y: wrist.y, sawFist: false, selected: false, lastSeen: timestamp };
+        match = { id: this.nextId++, side, x: wrist.x, y: wrist.y, visibleSince: timestamp, visibleSamples: 0, selected: false, lastSeen: timestamp };
         this.tracks.push(match);
       }
       claimed.add(match.id);
@@ -71,12 +54,10 @@ export class HandEnrollment {
       match.y = match.y * 0.35 + wrist.y * 0.65;
       match.lastSeen = timestamp;
 
-      const gesture = classifyHand(landmarks);
-      if (gesture.fist) match.sawFist = true;
-      if (gesture.open && match.sawFist) {
-        if (!match.selected) this.selectionChangedAt = timestamp;
+      match.visibleSamples += 1;
+      if (match.visibleSamples >= 3 && !match.selected) {
         match.selected = true;
-        match.sawFist = false;
+        this.selectionChangedAt = timestamp;
       }
     });
   }
@@ -90,13 +71,15 @@ export class HandEnrollment {
     return [...bySide.values()].slice(0,this.expectedHands);
   }
   autoReady(now) {
-    return this.selectedTracks(now).length === this.expectedHands && now-this.selectionChangedAt>=1200;
+    return this.selectedTracks(now).length === this.expectedHands && now-this.selectionChangedAt>=500;
   }
   get statusMessage() {
     const selected=this.selectedTracks();
     return selected.length===this.expectedHands
       ? `${selected.length}/${this.expectedHands} hands selected — starting automatically`
-      : `${selected.length}/${this.expectedHands} selected — make a fist, then open the remaining hand(s)`;
+      : selected.length
+        ? `${selected.length}/${this.expectedHands} hands found — bring the remaining hand into view`
+        : `Bring ${this.expectedHands===1?'one hand':'both hands'} into view — 0/${this.expectedHands} found`;
   }
   confirm(poseResult, now=performance.now()) {
     const pose=poseResult?.landmarks?.[0] || [];

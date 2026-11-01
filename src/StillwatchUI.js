@@ -2,11 +2,26 @@ import React, { useState, useEffect, useRef } from 'https://esm.sh/react@19.2.0'
 import { createRoot } from 'https://esm.sh/react-dom@19.2.0/client';
 import htm from 'https://esm.sh/htm@3.1.1';
 import { createMotionTracker } from './tracking/createMotionTracker.js';
+import { SPORTS, SportTracker } from './sport-tracker.js';
 const html = htm.bind(React.createElement);
-const sports = { Basketball: 'Show us your best free throw.', Boxing: 'Give us your best shadowboxing impression.', Tennis: 'An imaginary racket. A championship serve.', Archery: 'Draw your imaginary bow. Find your target.', 'Table tennis': 'Make that imaginary rally look dramatic.', Volleyball: 'Set up the imaginary winning point.' };
+const sports = {
+  Basketball: 'Shooting motion, release elbow extension, and relative jump lift.',
+  Boxing: 'Jab and cross counts, their extension scores, and detected 1–2 combinations.',
+  Tennis: 'Racket-swing estimates and approximate forehand/backhand direction.',
+  Archery: 'Stable draw holds, hold time, arm extension, and shoulder alignment.',
+  'Table tennis': 'Shorter racket-swing estimates and approximate stroke direction.',
+  Volleyball: 'Overhead swing estimates, arm extension, and relative jump lift.',
+  Badminton: 'Racket-swing estimates and approximate forehand/backhand direction.',
+  Soccer: 'Visible leg-extension kick estimates, split by side.',
+  Running: 'Alternating knee-lift step estimates and step cadence.',
+  Golf: 'Swing estimates, arm extension, torso-turn estimate, and swing tempo.',
+  Baseball: 'Overhead pitch/throw motion counts and arm-extension estimates.',
+};
 function Pose() { return html`<svg viewBox="0 0 300 300" role="img" aria-label="Illustration of a basketball pose"><circle className="ball" cx="222" cy="51" r="19"/><path className="ball-lines" d="M204 45q18 4 27 22m-26-29q-4 22 18 30M204 52h36"/><g className="bones"><circle cx="138" cy="88" r="20"/><path d="m137 110-3 17m-29 6 58-10m-58 10-35-37 23-31m70 58 34-29 13-25m-102 65 5 62 39-2 7-68m-46 70-26 35-15 36m80-73 28 26 23 29m-99-55 39-2"/></g><g className="joints">${[[105,133],[163,123],[70,96],[93,65],[197,94],[210,69],[113,196],[152,194],[87,231],[180,220],[72,267],[203,249]].map(([x,y])=>html`<circle key=${x} cx=${x} cy=${y} r="4"/>`)}</g></svg>`; }
 function Studio() {
   const [sport, setSport] = useState('Basketball');
+  const [stance, setStance] = useState('Left');
+  const [handCount, setHandCount] = useState('2');
   const [tracking, setTracking] = useState({ phase: 'off' });
   const [message, setMessage] = useState('');
   const [mirrored, setMirrored] = useState(true);
@@ -16,6 +31,8 @@ function Studio() {
   const tracker = useRef(null);
   const active = ['setup', 'tracking', 'paused'].includes(tracking.phase);
   const loading = tracking.phase === 'loading';
+  const sportPreview = new SportTracker(sport);
+  const sportMetrics = tracking.metrics?.sport || sportPreview.metrics;
 
   function showError(error) {
     setTracking({ phase: 'off' });
@@ -64,14 +81,32 @@ function Studio() {
         <span className="workspace-label">Your next alter ego</span>
         <div className="sport-controls">
           <label htmlFor="sport">Your sport</label>
-          <select id="sport" value=${sport} onChange=${event => setSport(event.target.value)}>
-            ${Object.keys(sports).map(name => html`<option key=${name}>${name}</option>`)}
+          <select id="sport" value=${sport} onChange=${event => { setSport(event.target.value); tracker.current?.setSport(event.target.value); }}>
+            ${SPORTS.map(name => html`<option key=${name}>${name}</option>`)}
           </select>
           <button onClick=${() => {
-            const choices = Object.keys(sports).filter(name => name !== sport);
-            setSport(choices[Math.floor(Math.random() * choices.length)]);
+            const choices = SPORTS.filter(name => name !== sport);
+            const next = choices[Math.floor(Math.random() * choices.length)];
+            setSport(next); tracker.current?.setSport(next);
           }}>⤨ <span>Random</span></button>
+          <label htmlFor="hand-count">Track</label>
+          <select id="hand-count" value=${handCount} onChange=${event => { setHandCount(event.target.value); tracker.current?.setHandCount(event.target.value); }}>
+            <option value="2">Both hands</option><option value="1">One hand</option>
+          </select>
         </div>
+        ${sport === 'Boxing' && html`<label className="stance-control" htmlFor="stance">Boxing stance
+          <select id="stance" value=${stance} onChange=${event => { setStance(event.target.value); tracker.current?.setStance(event.target.value); }}>
+            <option value="Left">Orthodox · left jab</option><option value="Right">Southpaw · right jab</option>
+          </select>
+        </label>`}
+        <section className="sport-stats" aria-live="polite">
+          <div className="sport-stats-heading"><h2>${sport} practice stats</h2><span>CAMERA ESTIMATES</span></div>
+          <div className="sport-stat-grid">${sportMetrics.map(metric => html`
+            <div className="sport-stat" key=${metric.label}><span>${metric.label}</span><strong>${metric.value}</strong></div>
+          `)}</div>
+          <p>${sports[sport]}</p>
+          <small>${tracking.metrics?.sportExplanation || sportPreview.explanation} These are camera-based practice estimates, not professional coaching scores. The camera cannot confirm ball, racket, or equipment contact.</small>
+        </section>
       </div>
       <div className="camera-slot">
       <div className="camera" ref=${stage}>
@@ -115,8 +150,8 @@ function Studio() {
             </details>
             ${tracking.phase === 'setup' && html`
               <div className="enrollment" role="status">
-                <strong>Make a fist, then open your hand.</strong>
-                <p>Do this with each hand you want to track. Tracking starts automatically after a short pause.</p>
+                <strong>Bring ${handCount === '1' ? 'one hand' : 'both hands'} into view.</strong>
+                <p>Hold still for a moment. The tracker selects visible hands and starts automatically—no gesture or setup button needed.</p>
                 <span>${tracking.instruction}</span>
               </div>
             `}
@@ -128,7 +163,7 @@ function Studio() {
         <div className="session-summary">
           <p><strong>${sport}.</strong> ${sports[sport]}</p>
           <p className="extension-count">
-            Arm extensions: <output aria-label="Arm extensions">${tracking.metrics?.counts?.arms ?? 0}</output>
+            General arm extensions: <output aria-label="Arm extensions">${tracking.metrics?.counts?.arms ?? 0}</output>
           </p>
         </div>
         <button className="primary" disabled=${!active} onClick=${async () => {

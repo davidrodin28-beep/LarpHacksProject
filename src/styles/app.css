@@ -260,6 +260,83 @@ footer {
   margin-right:7px;
 }
 
+.sport-controls select {
+  max-width: min(240px, 48vw);
+}
+
+.stance-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.sport-stats {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 17px 19px;
+  margin-bottom: 17px;
+  background: #fbfcf8;
+}
+
+.sport-stats-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sport-stats-heading h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.sport-stats-heading span {
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+
+.sport-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.sport-stat {
+  min-height: 66px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 5px;
+}
+
+.sport-stat span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.sport-stat strong {
+  font-size: 18px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.sport-stats p,
+.sport-stats small {
+  display: block;
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
 select {
   background:#edf0e7;
 }
@@ -405,6 +482,105 @@ h2 {
   border-radius:5px;
   padding:6px 9px;
   font-size:11px;
+}
+
+@media(min-width:1500px) {
+  .intro {
+    min-height:720px;
+  }
+}
+
+@media(max-width:700px) {
+  .shell {
+    padding:0 22px;
+  }
+  header {
+    height:78px;
+  }
+  .brand {
+    font-size:25px;
+  }
+  .tagline {
+    display:none;
+  }
+  .intro {
+    grid-template-columns:1fr;
+    text-align:center;
+    padding:50px 0 40px;
+    gap:40px;
+  }
+  .intro h1 {
+    font-size:57px;
+    letter-spacing:-3px;
+  }
+  .intro p {
+    font-size:16px;
+    margin-bottom:28px;
+  }
+  .kicker {
+    font-size:11px;
+    margin-bottom:20px;
+  }
+  .start {
+    min-height:54px;
+    font-size:16px;
+    min-width:170px;
+  }
+  .art {
+    max-width:280px;
+    justify-self:center;
+  }
+  .art>span {
+    font-size:11px;
+  }
+  .studio-top {
+    align-items:stretch;
+    flex-direction:column;
+    gap:14px;
+  }
+  .workspace-label {
+    font-size:11px;
+  }
+  .sport-controls {
+    flex-wrap:wrap;
+  }
+  .sport-controls select {
+    max-width: none;
+  }
+  .sport-controls label {
+    width:100%;
+  }
+  .sport-controls select {
+    flex:1;
+    min-width:0;
+    font-size:16px;
+  }
+  .camera {
+    aspect-ratio:4/3;
+    max-height:58svh;
+    min-height:290px;
+  }
+  .camera-empty h2 {
+    font-size:24px;
+  }
+  .camera-empty p {
+    font-size:13px;
+  }
+  .studio-bottom {
+    align-items:stretch;
+    flex-direction:column;
+    gap:7px;
+  }
+  .studio-bottom .primary {
+    width:100%;
+  }
+  footer {
+    justify-content:center;
+    flex-wrap:wrap;
+    padding:20px 0;
+    font-size:11px;
+    gap:10px 20px;
+  }
 }
 
 /* Camera integration: inference and drawing stay outside React. */

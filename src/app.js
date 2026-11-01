@@ -4,6 +4,7 @@ import { INFERENCE_INTERVAL_MS } from './config.js';
 import { MovementCounter } from './movement-counter.js';
 import { MotionMeter } from './motion-meter.js';
 import { OverlayRenderer } from './overlay-renderer.js';
+import { SportTracker } from './sport-tracker.js';
 import { VisionPipeline } from './vision-pipeline.js';
 
 const $ = (id) => document.getElementById(id);
@@ -16,6 +17,11 @@ const ui = {
   calibrationPanel: $('calibrationPanel'),
   calibrationStatus: $('calibrationStatus'),
   handCount: $('handCount'),
+  sportSelect: $('sportSelect'),
+  sportStance: $('sportStance'),
+  sportStanceRow: $('sportStanceRow'),
+  sportMetrics: $('sportMetrics'),
+  sportDescription: $('sportDescription'),
   handsStatus: $('handsStatus'),
   startButton: $('startBtn'),
   pauseButton: $('pauseBtn'),
@@ -36,11 +42,6 @@ const ui = {
   closes: $('closesCount'),
   tilts: $('tiltsCount'),
   slips: $('slipsCount'),
-  jabs: $('jabsCount'),
-  crosses: $('crossesCount'),
-  combos: $('combosCount'),
-  stance: $('stance'),
-  comboStatus: $('comboStatus'),
   slipFeedback: $('slipFeedback'),
   slipStatus: $('slipStatus'),
   movementStatus: $('movementStatus'),
@@ -52,6 +53,7 @@ const vision = new VisionPipeline();
 const enrollment = new HandEnrollment();
 const motion = new MotionMeter();
 const movementCounter = new MovementCounter();
+const sportTracker = new SportTracker(ui.sportSelect.value);
 const renderer = new OverlayRenderer(ui.video, ui.canvas);
 const graphBars = [];
 let handOverlays = [];
@@ -108,6 +110,27 @@ function updateMetrics(sample) {
   });
 }
 
+function renderSportStats() {
+  const metrics=sportTracker.metrics;
+  const currentLabels=[...ui.sportMetrics.children].map(card=>card.firstElementChild?.dataset.label);
+  if (JSON.stringify(currentLabels)!==JSON.stringify(metrics.map(item=>item.label))) {
+    ui.sportMetrics.replaceChildren();
+    for (const item of metrics) {
+      const card=document.createElement('div'); card.className='metric';
+      const label=document.createElement('div'); label.className='metric-label'; label.dataset.label=item.label; label.textContent=item.label;
+      const value=document.createElement('div'); value.className='metric-value lime'; value.textContent=item.value;
+      card.append(label,value); ui.sportMetrics.append(card);
+    }
+  } else {
+    metrics.forEach((item,index)=>{
+      const value=ui.sportMetrics.children[index].lastElementChild;
+      if (value.textContent!==String(item.value)) value.textContent=item.value;
+    });
+  }
+  if (ui.sportDescription.textContent!==sportTracker.explanation) ui.sportDescription.textContent=sportTracker.explanation;
+  ui.sportStanceRow.hidden=sportTracker.sport!=='Boxing';
+}
+
 function updateCalibrationStatus() {
   ui.calibrationStatus.textContent = enrollment.statusMessage;
   if (enrollment.autoReady(performance.now())) finishSetup();
@@ -148,13 +171,14 @@ function loop() {
           const selectedHands = handOverlays.filter(hand=>!hand.preview);
           const previousSlips = Number(ui.slips.textContent);
           const counts = movementCounter.sample(results.pose, selectedHands, now, ui.video.videoWidth / ui.video.videoHeight);
-          for (const key of Object.keys(counts)) ui[key].textContent = counts[key];
+          for (const key of ['arms','opens','closes','tilts','slips']) ui[key].textContent = counts[key];
+          sportTracker.sample(results.pose, now, ui.video.videoWidth / ui.video.videoHeight);
+          renderSportStats();
           if (counts.slips > previousSlips) {
             ui.slipFeedback.textContent = `+${counts.slips-previousSlips} slip`;
             ui.slips.getAnimations().forEach(animation=>animation.cancel());
             ui.slips.animate([{transform:'scale(1.2)',color:'#fff'},{transform:'scale(1)',color:'#c4f06a'}],{duration:400});
           }
-          ui.comboStatus.textContent = movementCounter.combo.status;
           ui.movementStatus.textContent = movementCounter.status;
           ui.slipStatus.textContent = movementCounter.slip.status;
         }
@@ -284,11 +308,12 @@ function saveSnapshot() {
 function resetMetrics() {
   motion.reset();
   movementCounter.reset();
-  for (const key of ['arms','opens','closes','tilts','slips','jabs','crosses','combos']) ui[key].textContent = '0';
+  for (const key of ['arms','opens','closes','tilts','slips']) ui[key].textContent = '0';
+  sportTracker.reset();
+  renderSportStats();
   updateMetrics({ level: 0, peak: 0, history: Array(45).fill(0) });
   if (running) sessionStartedAt = Date.now();
   ui.slipFeedback.textContent = '';
-  ui.comboStatus.textContent = movementCounter.combo.status;
   showToast('Session metrics reset');
 }
 
@@ -341,10 +366,13 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) motion.resetPreviousFrame?.();
 });
 
-ui.stance.addEventListener('change', () => {
-  movementCounter.combo.setLead(ui.stance.value);
-  movementCounter.resetGesture();
-  ui.comboStatus.textContent = movementCounter.combo.status;
+ui.sportSelect.addEventListener('change', () => {
+  sportTracker.setSport(ui.sportSelect.value);
+  renderSportStats();
+  if (running) showToast(`${ui.sportSelect.value} tracking selected`);
+});
+ui.sportStance.addEventListener('change', () => {
+  sportTracker.setStance(ui.sportStance.value);
 });
 
 function reselectHands() {
@@ -362,3 +390,5 @@ function reselectHands() {
 }
 ui.handCount.addEventListener('change',reselectHands);
 $('reselectHands').addEventListener('click',reselectHands);
+sportTracker.setStance(ui.sportStance.value);
+renderSportStats();
