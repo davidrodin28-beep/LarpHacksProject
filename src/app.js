@@ -15,6 +15,8 @@ const ui = {
   placeholder: $('placeholder'),
   calibrationPanel: $('calibrationPanel'),
   calibrationStatus: $('calibrationStatus'),
+  handCount: $('handCount'),
+  handsStatus: $('handsStatus'),
   startButton: $('startBtn'),
   pauseButton: $('pauseBtn'),
   snapshotButton: $('snapshotBtn'),
@@ -133,14 +135,16 @@ function loop() {
       lastVideoTime = ui.video.currentTime;
       try {
         results = vision.detect(ui.video, now);
-        if (results.hands !== lastHandObservation) {
+        const freshHands = results.hands !== lastHandObservation;
+        if (freshHands) {
           lastHandObservation = results.hands;
-          handOverlays = enrollment.visibleHands(results.hands, results.pose);
+          handOverlays = enrollment.visibleHands(results.hands, results.pose, now);
         }
         if (enrollment.calibrating) {
-          enrollment.observe(results.hands, now);
+          if (freshHands) enrollment.observe(results.hands, now);
           updateCalibrationStatus();
         } else {
+          ui.handsStatus.textContent = `${handOverlays.length}/${enrollment.targets.length} hands visible${handOverlays.length < enrollment.targets.length ? ' — reacquiring missing hand' : ''}`;
           const selectedHands = handOverlays.filter(hand=>!hand.preview);
           const previousSlips = Number(ui.slips.textContent);
           const counts = movementCounter.sample(results.pose, selectedHands, now, ui.video.videoWidth / ui.video.videoHeight);
@@ -180,8 +184,10 @@ async function startCamera() {
     motion.reset();
     movementCounter.resetGesture();
     ui.movementStatus.textContent = 'Select hands to begin';
+    ui.handsStatus.textContent = 'Selecting hands';
     handOverlays = [];
     lastHandObservation = null;
+    enrollment.expectedHands = Number(ui.handCount.value);
     enrollment.begin();
     sessionStartedAt = Date.now();
     renderer.resize(ui.stage);
@@ -218,6 +224,7 @@ function stopCamera() {
   running = false;
   paused = false;
   movementCounter.resetGesture();
+  ui.handsStatus.textContent = 'Camera off';
   ui.movementStatus.textContent = 'Camera off';
   ui.slipStatus.textContent = 'Camera off';
   enrollment.reset();
@@ -315,7 +322,7 @@ ui.cameraSelect.addEventListener('change', () => {
   }
 });
 function finishSetup() {
-  if (!enrollment.calibrating || !enrollment.confirm()) return;
+  if (!enrollment.calibrating || !enrollment.confirm(results.pose)) return;
   ui.calibrationPanel.style.display = 'none';
   ui.pauseButton.disabled = false;
   movementCounter.resetGesture();
@@ -339,3 +346,19 @@ ui.stance.addEventListener('change', () => {
   movementCounter.resetGesture();
   ui.comboStatus.textContent = movementCounter.combo.status;
 });
+
+function reselectHands() {
+  enrollment.expectedHands = Number(ui.handCount.value);
+  if (!running) return;
+  enrollment.begin();
+  handOverlays=[];lastHandObservation=null;
+  paused=false;movementCounter.resetGesture();
+  ui.calibrationPanel.style.display='block';
+  ui.pauseButton.disabled=true;
+  ui.pauseButton.innerHTML='Pause analysis';
+  ui.calibrationStatus.textContent=enrollment.statusMessage;
+  ui.handsStatus.textContent='Selecting hands';
+  setCameraStatus(true,'HAND SETUP');
+}
+ui.handCount.addEventListener('change',reselectHands);
+$('reselectHands').addEventListener('click',reselectHands);

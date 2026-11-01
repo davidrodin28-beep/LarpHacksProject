@@ -10,6 +10,8 @@ export class VisionPipeline {
     this.lastFaceAt = -Infinity;
     this.cachedHands = null;
     this.cachedFace = null;
+    this.handInterval = 66;
+    this.trackingCost = 33;
   }
 
   get ready() {
@@ -44,7 +46,7 @@ export class VisionPipeline {
     this.hands = await Vision.HandLandmarker.createFromOptions(files, {
       baseOptions: { modelAssetPath: MODEL_URLS.hands },
       runningMode: 'VIDEO',
-      numHands: 4,
+      numHands: 2,
       minHandDetectionConfidence: 0.45,
       minHandPresenceConfidence: 0.45,
       minTrackingConfidence: 0.45,
@@ -61,10 +63,14 @@ export class VisionPipeline {
 
   detect(video, timestamp) {
     if (!this.ready) throw new Error('Vision models are not initialized.');
+    const started = performance.now();
     const pose = this.pose.detectForVideo(video, timestamp);
-    if (timestamp - this.lastHandsAt >= 66) {
+    if (timestamp - this.lastHandsAt >= this.handInterval) {
       this.cachedHands = this.hands.detectForVideo(video, timestamp);
       this.lastHandsAt = timestamp;
+      this.trackingCost = this.trackingCost*.75 + (performance.now()-started)*.25;
+      // Increase sampling only when the device has enough inference headroom.
+      this.handInterval = this.trackingCost < 27 ? 33 : 66;
     }
     if (timestamp - this.lastFaceAt >= 150) {
       this.cachedFace = this.face.detectForVideo(video, timestamp);
