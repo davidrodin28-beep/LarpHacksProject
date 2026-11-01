@@ -1,7 +1,7 @@
 import { CameraSource } from './camera-source.js';
 import { HandEnrollment } from './hand-enrollment.js';
 import { INFERENCE_INTERVAL_MS } from './config.js';
-import { EmoteCounter } from './emote-counter.js';
+import { MovementCounter } from './movement-counter.js';
 import { MotionMeter } from './motion-meter.js';
 import { OverlayRenderer } from './overlay-renderer.js';
 import { VisionPipeline } from './vision-pipeline.js';
@@ -15,7 +15,6 @@ const ui = {
   placeholder: $('placeholder'),
   calibrationPanel: $('calibrationPanel'),
   calibrationStatus: $('calibrationStatus'),
-  lockHands: $('lockHands'),
   startButton: $('startBtn'),
   pauseButton: $('pauseBtn'),
   snapshotButton: $('snapshotBtn'),
@@ -30,8 +29,11 @@ const ui = {
   sensitivity: $('sensitivity'),
   sensitivityLabel: $('sensitivityLabel'),
   graph: $('graph'),
-  emoteCount: $('emoteCount'),
-  emoteStatus: $('emoteStatus'),
+  arms: $('armsCount'),
+  opens: $('opensCount'),
+  closes: $('closesCount'),
+  tilts: $('tiltsCount'),
+  movementStatus: $('movementStatus'),
   toast: $('toast'),
 };
 
@@ -39,7 +41,7 @@ const camera = new CameraSource(ui.video, ui.cameraSelect);
 const vision = new VisionPipeline();
 const enrollment = new HandEnrollment();
 const motion = new MotionMeter();
-const emoteCounter = new EmoteCounter();
+const movementCounter = new MovementCounter();
 const renderer = new OverlayRenderer(ui.video, ui.canvas);
 const graphBars = [];
 
@@ -95,7 +97,7 @@ function updateMetrics(sample) {
 
 function updateCalibrationStatus() {
   ui.calibrationStatus.textContent = enrollment.statusMessage;
-  ui.lockHands.disabled = !enrollment.canConfirm;
+  if (enrollment.autoReady(performance.now())) finishSetup();
 }
 
 function drawFrame() {
@@ -125,8 +127,9 @@ function loop() {
           updateCalibrationStatus();
         } else {
           const selectedHands = enrollment.visibleHands(results.hands, results.pose);
-          ui.emoteCount.textContent = String(emoteCounter.sample(selectedHands, now));
-          ui.emoteStatus.textContent = selectedHands.length ? emoteCounter.status : 'Show enrolled hands';
+          const counts = movementCounter.sample(results.pose, selectedHands, now, ui.video.videoWidth / ui.video.videoHeight);
+          for (const key of Object.keys(counts)) ui[key].textContent = counts[key];
+          ui.movementStatus.textContent = movementCounter.status;
         }
       } catch (error) {
         console.error('Landmark inference failed', error);
@@ -151,8 +154,8 @@ async function startCamera() {
     lastInference = 0;
     results = { pose: null, hands: null, face: null };
     motion.reset();
-    emoteCounter.resetGesture();
-    ui.emoteStatus.textContent = 'Select hands to begin';
+    movementCounter.resetGesture();
+    ui.movementStatus.textContent = 'Select hands to begin';
     enrollment.begin();
     sessionStartedAt = Date.now();
     renderer.resize(ui.stage);
@@ -161,7 +164,6 @@ async function startCamera() {
     ui.video.style.display = 'block';
     ui.calibrationPanel.style.display = 'block';
     ui.calibrationStatus.textContent = enrollment.statusMessage;
-    ui.lockHands.disabled = true;
     ui.pauseButton.disabled = true;
     ui.pauseButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5v14M15 5v14"/></svg>Pause analysis';
     ui.snapshotButton.disabled = false;
@@ -189,8 +191,8 @@ async function startCamera() {
 function stopCamera() {
   running = false;
   paused = false;
-  emoteCounter.resetGesture();
-  ui.emoteStatus.textContent = 'Camera off';
+  movementCounter.resetGesture();
+  ui.movementStatus.textContent = 'Camera off';
   enrollment.reset();
   cancelAnimationFrame(animationFrame);
   camera.stop();
@@ -211,8 +213,8 @@ function stopCamera() {
 function togglePause() {
   if (!running || enrollment.calibrating) return;
   paused = !paused;
-  ui.emoteStatus.textContent = paused ? 'Paused' : 'Counting automatically';
-  emoteCounter.resetGesture();
+  ui.movementStatus.textContent = paused ? 'Paused' : 'Counting automatically';
+  movementCounter.resetGesture();
   ui.pauseButton.innerHTML = paused
     ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="m8 5 11 7-11 7z"/></svg>Resume analysis'
     : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5v14M15 5v14"/></svg>Pause analysis';
@@ -244,8 +246,8 @@ function saveSnapshot() {
 
 function resetMetrics() {
   motion.reset();
-  emoteCounter.reset();
-  ui.emoteCount.textContent = '0';
+  movementCounter.reset();
+  for (const key of ['arms','opens','closes','tilts']) ui[key].textContent = '0';
   updateMetrics({ level: 0, peak: 0, history: Array(45).fill(0) });
   if (running) sessionStartedAt = Date.now();
   showToast('Session metrics reset');
@@ -280,14 +282,15 @@ ui.cameraSelect.addEventListener('change', () => {
     startCamera();
   }
 });
-ui.lockHands.addEventListener('click', () => {
+function finishSetup() {
   if (!enrollment.calibrating || !enrollment.confirm()) return;
   ui.calibrationPanel.style.display = 'none';
   ui.pauseButton.disabled = false;
-  emoteCounter.resetGesture();
-  ui.emoteStatus.textContent = 'Counting automatically';
+  movementCounter.resetGesture();
+  ui.movementStatus.textContent = 'Counting automatically';
+  setCameraStatus(true);
   showToast(`Tracking ${enrollment.targets.length} selected hand${enrollment.targets.length === 1 ? '' : 's'}`);
-});
+}
 ui.sensitivity.addEventListener('input', () => { ui.sensitivityLabel.value = ui.sensitivity.value; });
 ui.snapshotButton.addEventListener('click', saveSnapshot);
 $('resetBtn').addEventListener('click', resetMetrics);

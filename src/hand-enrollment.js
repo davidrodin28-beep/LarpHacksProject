@@ -21,6 +21,7 @@ export class HandEnrollment {
     this.tracks = [];
     this.targets = [];
     this.nextId = 1;
+    this.selectionChangedAt = 0;
   }
 
   begin() {
@@ -28,6 +29,7 @@ export class HandEnrollment {
     this.tracks = [];
     this.targets = [];
     this.nextId = 1;
+    this.selectionChangedAt = 0;
   }
 
   reset() {
@@ -70,10 +72,17 @@ export class HandEnrollment {
       const gesture = classifyHand(landmarks);
       if (gesture.fist) match.sawFist = true;
       if (gesture.open && match.sawFist) {
+        if (!match.selected) this.selectionChangedAt = timestamp;
         match.selected = true;
         match.sawFist = false;
       }
     });
+  }
+
+  autoReady(now) {
+    const selected = this.tracks.filter(t => t.selected && now-t.lastSeen < 700);
+    const waiting = this.tracks.some(t => t.sawFist && !t.selected && now-t.lastSeen < 700);
+    return selected.length > 0 && !waiting && now-this.selectionChangedAt >= 2500;
   }
 
   get canConfirm() {
@@ -85,7 +94,7 @@ export class HandEnrollment {
     const waitingForOpen = this.tracks.some((track) => track.sawFist && !track.selected);
     if (selected.length) {
       const names = selected.map(({ side }) => `${side} hand`).join(' + ');
-      return `${names} selected${waitingForOpen ? ' · open your fist' : ''} · add another if needed`;
+      return `${names} selected${waitingForOpen ? ' · open your fist' : ''} · starting automatically; add another hand now`;
     }
     return waitingForOpen ? 'Fist detected — now open your hand' : 'Make a fist, then open it';
   }

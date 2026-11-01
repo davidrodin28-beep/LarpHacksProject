@@ -87,6 +87,15 @@ export class OverlayRenderer {
     const pose = poseResult?.landmarks?.[0];
     if (!pose) return;
     const { context, canvas } = this;
+    for (const [ear, shoulder, name] of [[7,11,'LEFT EAR'],[8,12,'RIGHT EAR']]) {
+      if (pose[ear] && (pose[ear].visibility ?? 1) >= 0.65) {
+        this.#dot(pose[ear], '#8dd9ff', 5, 0.65);
+        this.#label(name, pose[ear], '#8dd9ff');
+        context.strokeStyle = '#8dd9ff88';
+        context.lineWidth = 2;
+        this.#drawSegment(pose[ear], pose[shoulder], 0.65);
+      }
+    }
     const leftShoulder = pose[11];
     const rightShoulder = pose[12];
     if (leftShoulder && rightShoulder && (leftShoulder.visibility ?? 1) > 0.45 && (rightShoulder.visibility ?? 1) > 0.45) {
