@@ -10,6 +10,19 @@ export function worldJointAngle(a,b,c) {
   const size = Math.hypot(...u)*Math.hypot(...v);
   return size < 1e-6 ? null : Math.acos(Math.max(-1,Math.min(1,u.reduce((sum,n,i)=>sum+n*v[i],0)/size)))*180/Math.PI;
 }
+// Reach is normalized by the two arm segments, not projected shoulder width.
+// This remains unchanged when a 3D arm rotates or the person moves farther away.
+export function armGeometry(shoulder, elbow, wrist) {
+  const points = [shoulder,elbow,wrist];
+  if (!points.every(p=>p && [p.x,p.y,p.z].every(Number.isFinite))) return null;
+  const length = (a,b)=>Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);
+  const upper = length(shoulder,elbow), lower = length(elbow,wrist);
+  if (Math.min(upper,lower) < 1e-5 || Math.max(upper,lower)/Math.min(upper,lower) > 3) return null;
+  const angle = worldJointAngle(shoulder,elbow,wrist);
+  const reach = length(shoulder,wrist)/(upper+lower);
+  return { angle, reach, state: angle >= 150 && reach >= 0.96 ? 'straight'
+    : angle <= 120 && reach <= 0.9 ? 'bent' : null };
+}
 const valid = p => p && Number.isFinite(p.x) && Number.isFinite(p.y) && (p.visibility ?? 1) >= 0.65;
 const distance = (a,b,aspect) => Math.hypot((a.x-b.x)*aspect,a.y-b.y);
 
@@ -22,12 +35,13 @@ export class MovementCounter {
   resetGesture() {
     this.states = new Map();
     this.angles = {};
+    this.reaches = {};
     this.status = 'Counting automatically';
   }
   transition(key, next, now, onChange, requiredSamples = 2) {
     if (!next) {
       const existing = this.states.get(key);
-      if (existing) existing.seen = now;
+      if (existing) { existing.seen = now; existing.samples = 0; existing.candidate = null; }
       return;
     }
     let state = this.states.get(key);
@@ -44,6 +58,7 @@ export class MovementCounter {
   sample(poseResult, hands, now, aspect = 1) {
     const pose = poseResult?.landmarks?.[0] || [];
     this.angles = {};
+    this.reaches = {};
     const world = poseResult?.worldLandmarks?.[0] || [];
     for (const [side,s,e,w] of [['Left',11,13,15],['Right',12,14,16]]) {
       const key = 'arm'+side;
@@ -55,12 +70,22 @@ export class MovementCounter {
         if (prior && now-prior.seen > 250) this.states.delete(key);
         continue;
       }
-      const angle = hasWorld ? worldJointAngle(world[s],world[e],world[w]) : jointAngle(pose[s],pose[e],pose[w],aspect);
-      if (angle === null) continue;
+      // Fall back to aspect-corrected image geometry only when world data is absent.
+      const geometry = hasWorld
+        ? armGeometry(world[s],world[e],world[w])
+        : armGeometry(...joints.map(p=>({x:p.x*aspect,y:p.y,z:0})));
+      if (!geometry) { this.states.delete(key); continue; }
+      const mode = hasWorld ? '3D' : '2D';
+      const previous = this.states.get(key);
+      if (previous && previous.mode !== mode) this.states.delete(key);
+      const { angle, reach, state } = geometry;
       this.angles[side] = Math.round(angle);
-      this.transition('arm'+side,angle >= 155 ? 'straight' : angle <= 115 ? 'bent' : null,now,(before,after)=>{
+      this.reaches[side] = { percent: Math.round(reach*100), mode };
+      this.transition(key,state,now,(before,after)=>{
         if (before === 'bent' && after === 'straight') this.counts.arms++;
-      }, confidence >= 0.65 ? 1 : 2);
+      }, hasWorld && confidence >= 0.65 ? 1 : 2);
+      const current = this.states.get(key);
+      if (current) current.mode = mode;
     }
     for (const hand of hands) {
       const p = hand.landmarks;
@@ -88,7 +113,7 @@ export class MovementCounter {
         if (before && after !== 'neutral' && before !== after) this.counts.tilts++;
       });
     } else this.states.delete('neck');
-    const angles = Object.entries(this.angles).map(([side,a])=>`${side} elbow ${a}°`).join(' · ');
+    const angles = Object.entries(this.angles).map(([side,a])=>`${side}: ${a}° · ${this.reaches[side].percent}% reach (${this.reaches[side].mode})`).join(' · ');
     this.status = angles || 'Keep shoulders, elbows and wrists visible';
     return this.counts;
   }
