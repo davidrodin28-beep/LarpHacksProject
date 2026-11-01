@@ -94,7 +94,7 @@ export class HandEnrollment {
     const waitingForOpen = this.tracks.some((track) => track.sawFist && !track.selected);
     if (selected.length) {
       const names = selected.map(({ side }) => `${side} hand`).join(' + ');
-      return `${names} selected${waitingForOpen ? ' · open your fist' : ''} · starting automatically; add another hand now`;
+      return `${names} selected${waitingForOpen ? ' · open your fist' : ''} · starting automatically${selected.length < 2 ? '; add another hand now' : ''}`;
     }
     return waitingForOpen ? 'Fist detected — now open your hand' : 'Make a fist, then open it';
   }
