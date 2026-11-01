@@ -15,7 +15,7 @@ Then open [http://localhost:8000](http://localhost:8000) and choose **Start came
 Hand setup starts tracking automatically 2.5 seconds after the last fist-to-open selection. Enroll both hands before the countdown finishes if you want both tracked.
 
 Automatic movement counters replace the 6-7 counter:
-- Arm extensions: with your arm side-on to the camera, bend the elbow below 115 degrees, then straighten past 155 degrees. Each arm counts separately. The shoulder/elbow/wrist angle uses the inverse cosine of the dot product, with camera aspect ratio correction.
+- Arm extensions: with your arm side-on to the camera, bend the elbow below 115 degrees, then straighten past 155 degrees. Each arm counts separately. The shoulder/elbow/wrist angle uses the inverse cosine of a 3D dot product from pose world landmarks, with an aspect-corrected 2D fallback. Partly obscured arms require two confirming samples; clear arms accept a single extension sample to catch quick movements. Short tracking gaps up to 250 ms retain the starting bend; longer loss clears it.
 - Hand opens and closes: each enrolled hand has separate open/closed state transitions, summed in the two totals. The initial hand pose does not count.
 - Ear-to-shoulder tilts: face the camera and start upright. Each lean toward a shoulder counts once; moving across to the other shoulder counts again. This uses pose ear landmarks, ear-to-shoulder distances normalized by shoulder width, and head roll relative to the shoulders. Ear markers and connecting lines are visible on the overlay.
 
@@ -35,3 +35,5 @@ Pause analysis pauses counters; Reset data clears totals. Low-confidence or miss
 - `src/config.js` centralizes model URLs and processing settings.
 
 Each module exposes a small interface; `src/app.js` is the composition layer that passes results between them.
+
+Pose inference is requested every 33 ms on new video frames; hands run at most every 66 ms and face landmarks every 150 ms to prioritize quick arm movements. These are scheduling targets, not guaranteed frame rates. Fully occluded arms and movements between camera frames cannot be measured reliably.

@@ -4,6 +4,12 @@ export function jointAngle(a, b, c, aspect = 1) {
   const size = Math.hypot(...u)*Math.hypot(...v);
   return size < 1e-6 ? null : Math.acos(Math.max(-1, Math.min(1, (u[0]*v[0]+u[1]*v[1])/size)))*180/Math.PI;
 }
+export function worldJointAngle(a,b,c) {
+  const u = [a.x-b.x,a.y-b.y,a.z-b.z];
+  const v = [c.x-b.x,c.y-b.y,c.z-b.z];
+  const size = Math.hypot(...u)*Math.hypot(...v);
+  return size < 1e-6 ? null : Math.acos(Math.max(-1,Math.min(1,u.reduce((sum,n,i)=>sum+n*v[i],0)/size)))*180/Math.PI;
+}
 const valid = p => p && Number.isFinite(p.x) && Number.isFinite(p.y) && (p.visibility ?? 1) >= 0.65;
 const distance = (a,b,aspect) => Math.hypot((a.x-b.x)*aspect,a.y-b.y);
 
@@ -18,7 +24,7 @@ export class MovementCounter {
     this.angles = {};
     this.status = 'Counting automatically';
   }
-  transition(key, next, now, onChange) {
+  transition(key, next, now, onChange, requiredSamples = 2) {
     if (!next) {
       const existing = this.states.get(key);
       if (existing) existing.seen = now;
@@ -29,7 +35,7 @@ export class MovementCounter {
     state.seen = now;
     state.samples = state.candidate === next ? state.samples+1 : 1;
     state.candidate = next;
-    if (state.samples >= 2 && state.stable !== next) {
+    if (state.samples >= requiredSamples && state.stable !== next) {
       onChange(state.stable, next);
       state.stable = next;
     }
@@ -38,14 +44,23 @@ export class MovementCounter {
   sample(poseResult, hands, now, aspect = 1) {
     const pose = poseResult?.landmarks?.[0] || [];
     this.angles = {};
+    const world = poseResult?.worldLandmarks?.[0] || [];
     for (const [side,s,e,w] of [['Left',11,13,15],['Right',12,14,16]]) {
-      if (![pose[s],pose[e],pose[w]].every(valid)) { this.states.delete('arm'+side); continue; }
-      const angle = jointAngle(pose[s],pose[e],pose[w],aspect);
+      const key = 'arm'+side;
+      const joints = [pose[s],pose[e],pose[w]];
+      const hasWorld = [world[s],world[e],world[w]].every(p=>p && [p.x,p.y,p.z].every(Number.isFinite));
+      const confidence = Math.min(...joints.map(p=>p?.visibility ?? (p ? 1 : 0)));
+      if (confidence < (hasWorld ? 0.35 : 0.65) || !joints.every(p=>p && Number.isFinite(p.x) && Number.isFinite(p.y))) {
+        const prior = this.states.get(key);
+        if (prior && now-prior.seen > 250) this.states.delete(key);
+        continue;
+      }
+      const angle = hasWorld ? worldJointAngle(world[s],world[e],world[w]) : jointAngle(pose[s],pose[e],pose[w],aspect);
       if (angle === null) continue;
       this.angles[side] = Math.round(angle);
       this.transition('arm'+side,angle >= 155 ? 'straight' : angle <= 115 ? 'bent' : null,now,(before,after)=>{
         if (before === 'bent' && after === 'straight') this.counts.arms++;
-      });
+      }, confidence >= 0.65 ? 1 : 2);
     }
     for (const hand of hands) {
       const p = hand.landmarks;
