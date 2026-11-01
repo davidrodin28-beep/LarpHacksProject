@@ -1,11 +1,20 @@
-# Stillwatch
+# Stillwatch UI
 
-Local React UI preview. Run `python3 -m http.server 8000` from this folder and open http://localhost:8000.
+From this repository, run `python3 -m http.server 8001`, then open http://localhost:8001.
 
-React and HTM load from esm.sh; an internet connection is required. No build tools or API keys are needed. Camera permission is requested only by **Enable camera**. Leaving the workspace stops the camera.
+React and HTM load from esm.sh; MediaPipe and its models load from the URLs in `src/config.js`. Internet access is required. Frames are processed locally; no API keys are needed.
 
-`src/StillwatchUI.js` and `src/styles/app.css` own the UI. `src/tracking/createCamera.js` owns camera lifecycle and PNG snapshots. Landmark inference is not integrated yet. Original tracking source and the previous mockup are preserved in `references/` for integration with the teammate's latest code.
+## Ownership
 
-## Merging tracker updates
+- `src/StillwatchUI.js` and `src/styles/app.css`: React interface and styling.
+- `src/tracking/createMotionTracker.js`: integration adapter, with start, stop, pause, mirror, snapshot, and dispose methods. Pass video/canvas/stage elements and status/error callbacks. Status updates are limited to about four per second; frames never pass through React state.
+- Team tracking modules (`camera-source.js`, `vision-pipeline.js`, `hand-enrollment.js`, `overlay-renderer.js`, `movement-counter.js`, `motion-meter.js`, `config.js`) are used without modifications.
+- `src/tracking/createCamera.js`: unused historical camera-only adapter; retained for reference.
 
-The main UI is at `/`. The teammate’s complete tracker interface is preserved at `/tracker.html` and uses `src/app.js` plus the tracking modules from main. The new React UI still uses its temporary camera-only adapter; it does not yet invoke the landmark tracker. Integrate through a shared tracker API before removing the original tracker interface. UI code uses `StillwatchUI.js` to avoid a case-only filename collision with `app.js` on Windows and macOS.
+## Flow
+
+Start opens the workspace without requesting camera permission. Enable camera opens the camera, loads models, then starts enrollment. Make a fist and open each hand to enroll it; the team's automatic enrollment delay is preserved. Sport selection changes the prompt without restarting the tracker. Settings exposes mirror, pause/resume, and camera stop. Snapshots include the rendered landmarks and current mirroring. Leaving the workspace cancels loops and releases camera/model resources, including pending startup operations.
+
+Movement counts and motion metrics continue inside the adapter; they are not displayed in a dashboard. Session duration includes time paused. The default motion change threshold is 32.
+
+The teammate's original interface remains at http://localhost:8001/tracker.html and uses `src/app.js`. Do not load that entry script on the React page. The UI entry is named `StillwatchUI.js` to avoid a case-only filename collision with `app.js`.
