@@ -29,7 +29,7 @@ def main():
     import os
     if not os.environ.get('ELEVENLABS_API_KEY', '').strip():
         print(f'Voice needs ELEVENLABS_API_KEY in {ROOT / ".env"}. Add it and restart.', flush=True)
-    print(f'Open http://localhost:{args.port} — log in, then choose Enable voice and Read instructions.', flush=True)
+    print(f'Open http://localhost:{args.port} — log in, enable voice, then start guided practice for checkpoint instructions.', flush=True)
     uvicorn.run('app:app', host='127.0.0.1', port=args.port)
 
 

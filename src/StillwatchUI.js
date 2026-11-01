@@ -5,7 +5,7 @@ import htm from 'https://esm.sh/htm@3.1.1';
 import { createMotionTracker } from './tracking/createMotionTracker.js';
 import { lessons } from './coaching/lessons.js';
 import { useNarration } from './coaching/use-narration.js';
-import { coachingNarration, lessonInstructions, sportInstructions } from './coaching/narration.js';
+import { coachingNarration, sportInstructions } from './coaching/narration.js';
 import { SportInventor, LiveRound, fetchTriggers } from './sport-inventor.js';
 const html = htm.bind(React.createElement);
 const sports = { Basketball: 'Show us your best free throw.', Boxing: 'Give us your best shadowboxing impression.', Tennis: 'An imaginary racket. A championship serve.', Archery: 'Draw your imaginary bow. Find your target.', 'Table tennis': 'Make that imaginary rally look dramatic.', Volleyball: 'Set up the imaginary winning point.' };
@@ -36,6 +36,7 @@ function Studio() {
   const guest = document.getElementById('root').dataset.guestMode === 'true';
   const voice = useNarration();
   const voiceCue = custom ? '' : coachingNarration(lesson, coaching, tracking.phase, tracking.paused);
+  const canRepeatStep = coaching.phase === 'practicing' && tracking.phase === 'tracking' && !tracking.paused;
   useEffect(() => {
     if (voice.enabled && voiceCue) void voice.speak(voiceCue);
     else voice.stop();
@@ -169,10 +170,13 @@ function Studio() {
         <div className="session-summary">
           <div className="voice-controls" aria-label="Spoken instructions">
             <button type="button" disabled=${guest} aria-pressed=${voice.enabled} onClick=${voice.toggle}>${voice.enabled ? 'Voice on · mute' : 'Enable voice'}</button>
-            <button type="button" disabled=${!voice.enabled || tracking.paused} onClick=${() => voice.speak(custom ? sportInstructions(custom) : lessonInstructions(lesson))}>Read instructions</button>
+            <button type="button" disabled=${!voice.enabled || tracking.paused || (!custom && !canRepeatStep)} onClick=${() => {
+              if (custom) void voice.speak(sportInstructions(custom));
+              else if (canRepeatStep) void voice.speak(voiceCue);
+            }}>${custom ? 'Read rules' : 'Repeat current step'}</button>
             <button type="button" disabled=${!voice.status} onClick=${voice.stop}>Stop voice</button>
           </div>
-          <p className="voice-status" role="status" aria-live="polite">${guest ? html`<a href="/login.html">Log in</a> to use spoken instructions. Camera practice is available as a guest.` : voice.status || (voice.enabled ? 'Spoken instructions by ElevenLabs' : 'Turn on voice to hear the instructions.')}</p>
+          <p className="voice-status" role="status" aria-live="polite">${guest ? html`<a href="/login.html">Log in</a> to use spoken instructions. Camera practice is available as a guest.` : voice.status || (voice.enabled ? custom ? 'Spoken instructions by ElevenLabs' : 'Each step is read when you reach its checkpoint. Start guided practice to begin.' : 'Turn on voice to hear the current checkpoint.')}</p>
           ${custom ? html`<p><strong>${custom.name}.</strong> ${custom.tagline}</p>
           <p className="extension-count">Arm extensions: <output aria-label="Arm extensions">${tracking.metrics?.counts?.arms ?? 0}</output></p>` : html`
           <div className="coach-heading"><span className="workspace-label">Your coach</span><span className="coach-level">Basics</span></div>

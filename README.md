@@ -55,7 +55,7 @@ If port 8000 is busy, add `--port 8001` and update the Supabase redirect URLs to
 1. Log in or continue as a guest, then select **Start training**.
 2. Choose a move and stance. Start the camera, frame your upper body, and make a fist followed by an open hand with each hand to finish setup.
 3. Start guided practice and hold each checkpoint briefly. Arm extensions register at an elbow angle of at least 125° after returning to a bent position.
-4. While signed in, select **Enable voice**, then **Read instructions** to hear the lesson. Voice also reads checkpoints during guided practice; mute or stop it at any time.
+4. While signed in, select **Enable voice** and start guided practice. The coach reads only the current checkpoint, then reads the next step after you complete it. **Repeat current step** replays that checkpoint; mute or stop voice at any time.
 5. Choose **Invent a sport** to generate a game, review its rules, and play a timed round.
 
 ElevenLabs and Nemotron require internet access and their respective API keys. Voice synthesis uses ElevenLabs credits. Camera tracking runs locally in the browser.

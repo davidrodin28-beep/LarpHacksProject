@@ -12,7 +12,7 @@ const context = vm.createContext({ AbortController, setTimeout, clearTimeout,
 const module = new vm.SourceTextModule(await readFile(new URL('../src/coaching/narration.js', import.meta.url), 'utf8'), { context });
 await module.link(() => { throw new Error('Narration must stay independent of tracking and React.'); });
 await module.evaluate();
-const { VoiceNarrator, speechChunks, coachingNarration, lessonInstructions, sportInstructions } = module.namespace;
+const { VoiceNarrator, speechChunks, coachingNarration, sportInstructions } = module.namespace;
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
 function fixture({ fetcher, autoFinish = true, token = 'session-token', defaultFetch = false } = {}) {
@@ -125,11 +125,23 @@ test('coaching narrates checkpoint changes but ignores frame progress and pauses
   ] };
   const state = { phase: 'practicing', step: 0, progress: 0 };
   const first = coachingNarration(lesson, state, 'tracking', false);
+  assert.match(first, /Hands near cheeks/);
+  assert.doesNotMatch(first, /Extend your lead hand|Move slowly/);
   assert.equal(coachingNarration(lesson, { ...state, progress: .5 }, 'tracking', false), first);
   assert.match(coachingNarration(lesson, { ...state, step: 1 }, 'tracking', false), /Extend your lead hand/);
   assert.equal(coachingNarration(lesson, state, 'tracking', true), '');
   assert.equal(coachingNarration(lesson, state, 'off', false), '');
-  assert.match(lessonInstructions(lesson), /Move slowly/);
+  const next = coachingNarration(lesson, { ...state, step: 1 }, 'tracking', false);
+  assert.doesNotMatch(next, /Hands near cheeks/);
+  assert.equal(coachingNarration(lesson, { ...state, phase: 'ready' }, 'tracking', false), '');
+  assert.equal(coachingNarration(lesson, state, 'setup', false), '');
+});
+
+test('finishing the final checkpoint announces completion without reading steps ahead', () => {
+  const lesson = { steps: [{ title: 'Guard', cue: 'Hands near cheeks.' }] };
+  const text = coachingNarration(lesson, { phase: 'completed', step: 0 }, 'tracking', false);
+  assert.match(text, /drill complete/);
+  assert.doesNotMatch(text, /Hands near cheeks|Checkpoint/);
 });
 
 test('invented game narration includes rules, scoring, fouls and starting instructions', () => {

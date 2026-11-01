@@ -12,20 +12,14 @@ export function speechChunks(text, limit = 1400) {
   return chunks;
 }
 
-export function lessonInstructions(lesson) {
-  return `${lesson.name}. ${lesson.focus} ${lesson.steps.map((step, index) =>
-    `Checkpoint ${index + 1}. ${step.title}. ${step.cue}`).join(' ')} Form tip. ${lesson.tip}`;
-}
-
 export function coachingNarration(lesson, coaching, phase, paused) {
-  if (paused || phase === 'paused' || phase === 'loading' || phase === 'off') return '';
-  if (phase === 'setup') return 'Make a fist, then open your hand. Do this with each hand you want to track. Tracking starts automatically after a short pause.';
+  if (paused || phase !== 'tracking') return '';
   if (coaching.phase === 'completed') return 'Position drill complete. Well done. You can practice again when you are ready.';
   if (coaching.phase === 'practicing') {
     const step = lesson.steps[coaching.step];
     return step ? `Checkpoint ${coaching.step + 1}. ${step.title}. ${step.cue} Hold the position gently.` : '';
   }
-  return `${lesson.name}. ${lesson.focus} Choose Start guided practice, or Read instructions to hear all the checkpoints.`;
+  return '';
 }
 
 export function sportInstructions(sport) {
@@ -107,7 +101,7 @@ export class VoiceNarrator {
       if (version !== this.version) return;
       this.stop();
       this.onStatus(error.name === 'NotAllowedError'
-        ? 'Your browser blocked playback. Choose Read instructions to play the voice.'
+        ? 'Your browser blocked playback. Use the step or rules playback button to try again.'
         : error.name === 'AbortError' ? 'Voice took too long to load. Please try again.'
         : error.message || 'Spoken instructions are unavailable. Please try again.');
     }
