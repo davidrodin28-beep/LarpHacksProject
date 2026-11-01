@@ -1,0 +1,3 @@
+# Render Web Service for the sport engine, created with the repository root as Root Directory.
+# Installs the FastAPI engine in sportgen/. Start command: uvicorn sportgen.server:app --host 0.0.0.0 --port $PORT
+./sportgen
