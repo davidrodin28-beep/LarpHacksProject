@@ -10,8 +10,27 @@ const html = htm.bind(React.createElement);
 const FALLBACK_TRIGGERS = { arm_extend: ['arms'], punch: ['jabs', 'crosses'], hand_open: ['opens'], hand_close: ['closes'], head_tilt: ['tilts'], slip: ['slips'] };
 const STAGES = { queued: 'Waiting for a slot…', 'inventing candidates': 'Inventing candidate sports…', done: 'Done', failed: 'Failed' };
 
+async function readEngineResponse(response) {
+  if (!response.ok) {
+    throw new Error(response.status === 404
+      ? 'Sport generation is not available on this website yet.'
+      : `The sport engine returned HTTP ${response.status}. Please try again.`);
+  }
+  // Some static hosts accept POST with an empty 200 response. Safari's JSON
+  // parser reports that as "The string did not match the expected pattern."
+  const text = await response.text();
+  if (!text.trim()) {
+    throw new Error('The website returned an empty response. Sport generation is not available yet.');
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error('The website returned an unexpected response. Sport generation is not available yet.');
+  }
+}
+
 export async function fetchTriggers() {
-  try { const r = await fetch(`${SPORTGEN_API_URL}/triggers`); if (r.ok) return await r.json(); } catch {}
+  try { return await readEngineResponse(await fetch(`${SPORTGEN_API_URL}/triggers`)); } catch {}
   return FALLBACK_TRIGGERS;
 }
 
@@ -38,8 +57,10 @@ export function SportInventor({ onPlay, disabled, onRead }) {
   async function poll(id) {
     try {
       const r = await fetch(`${SPORTGEN_API_URL}/jobs/${id}`);
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const j = await r.json();
+      const j = await readEngineResponse(r);
+      if (!j || !['queued', 'running', 'done', 'error'].includes(j.status)) {
+        throw new Error('The sport engine returned an invalid job status. Please try again.');
+      }
       setJob(j);
       if (j.status === 'done') setResult(j.result);
       else if (j.status === 'error') setError(j.error || 'Generation failed.');
@@ -55,12 +76,15 @@ export function SportInventor({ onPlay, disabled, onRead }) {
     const body = { ...form, minutes: Number(form.minutes), equipment: ['none'], space: 'standing in front of a webcam, upper body in frame' };
     try {
       const r = await fetch(`${SPORTGEN_API_URL}/jobs`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const { id, engine } = await r.json();
+      const data = await readEngineResponse(r);
+      if (!data || typeof data.id !== 'string' || !data.id) {
+        throw new Error('The sport engine did not start a game. Please try again.');
+      }
+      const { id, engine } = data;
       setJob({ id, engine, status: 'queued', stage: 'queued', elapsed_s: 0 });
       timer.current = setTimeout(() => poll(id), 2000);
     } catch (e) {
-      setError(`Could not reach the sport engine at ${SPORTGEN_API_URL}: ${e.message}`);
+      setError(`Could not start sport generation: ${e.message}`);
     }
   }
 
