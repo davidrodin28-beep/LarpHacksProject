@@ -993,25 +993,55 @@ footer {
 .panels { display:grid; gap:16px; padding:0 0 24px; }
 .panels:empty { display:none; }
 
-/* Boxing trainer: readable counts and controls outside the camera preview. */
+/* Compact training workspace: camera and coaching have explicit grid positions. */
 html:has(.studio),body:has(.studio){height:auto;min-height:100%;overflow:auto}
-.shell:has(.studio){height:auto;min-height:100svh;overflow:visible}
-.studio{height:auto!important;min-height:0;overflow:visible!important}
-.studio-title{font-size:25px;letter-spacing:-.8px;margin:8px 0 0;font-weight:500}
-.trainer-guide{display:flex;flex-wrap:wrap;gap:18px;margin:18px 0;color:var(--muted);font-size:12px}
-.trainer-guide span{display:flex;align-items:center;gap:8px}
-.trainer-guide b{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--sage);color:#526640;font-size:10px}
-.trainer-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}
-.trainer-stats>div{background:#fffefa;border:1px solid var(--line);border-radius:13px;padding:16px 18px;display:flex;flex-direction:column;gap:7px}
-.trainer-stats>div:first-child{background:#eaf2db;border-color:#d3dfbe}
-.trainer-stats span{font-size:12px;color:var(--muted)}
-.trainer-stats strong{font-size:34px;font-weight:550;line-height:1.1;font-variant-numeric:tabular-nums}
-.trainer-stats small{font-size:10px;color:#8a957f}
-.studio .camera-slot{height:clamp(300px,52vh,650px);min-height:300px;container-type:size}
-.trainer-actions{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid var(--line)}
-.trainer-actions p{font-size:12px;color:var(--muted);line-height:1.6;margin:0}
-.trainer-actions>div{display:flex;gap:8px}
-.trainer-actions button{font-size:12px;min-height:39px;padding:8px 14px}
-.studio .studio-bottom{padding-top:16px}
+.shell:has(.studio){height:auto;min-height:100svh;overflow:visible;max-width:1440px;padding:0 32px}
+.shell:has(.studio)>header{height:72px}
+.studio-wrap{overflow:visible;display:block}
+.studio-wrap>.studio,.studio-wrap>.studio--expanded{display:grid;height:auto;min-height:0;overflow:visible;grid-template-columns:minmax(0,1fr) 300px;grid-template-rows:auto auto auto auto auto;gap:14px 22px;align-items:start;padding-top:20px}
+.studio>.studio-top{grid-column:2;grid-row:1;display:flex;flex-direction:column;align-items:stretch;gap:8px;margin:0}
+.studio .workspace-label{font-size:10px;letter-spacing:1.3px}
+.studio .sport-controls{display:grid;grid-template-columns:1fr 1fr;gap:7px;align-items:center}
+.studio .sport-controls label,.studio .sport-controls select{grid-column:1/-1}
+.studio select,.studio button{min-height:36px;padding:8px 11px;font-size:12px}
+.studio .sport-controls label{font-size:11px;margin:0;color:var(--muted)}
+.studio>.trainer-guide{grid-column:1;grid-row:1;display:flex;flex-wrap:wrap;align-items:center;gap:8px 17px;margin:0;padding:5px 0;color:var(--muted);font-size:11px}
+.trainer-guide span{display:flex;align-items:center;gap:6px}
+.trainer-guide b{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--sage);color:#526640;font-size:9px}
+.studio>.trainer-stats{grid-column:1;grid-row:2;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:0}
+.trainer-stats>div{background:#fffefa;border:1px solid var(--line);border-radius:10px;padding:11px 13px;display:flex;flex-direction:column;gap:4px}
+.trainer-stats>div:first-child{background:#eaf2db}
+.trainer-stats span{font-size:11px;color:var(--muted)}
+.trainer-stats strong{font-size:25px;font-weight:550;line-height:1.15;font-variant-numeric:tabular-nums}
+.trainer-stats small{font-size:9px;color:#87947c}
+.studio>.camera-slot{grid-column:1;grid-row:3;display:block;width:100%;height:auto;min-height:0;aspect-ratio:16/9;container-type:size}
+.studio .camera{width:100%;height:100%;max-width:none;max-height:none;aspect-ratio:auto;margin:0;border-radius:14px;background:#182019}
+.studio .tracking-canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.studio .camera-empty{color:var(--bg);padding:20px}
+.studio .camera-empty h2{font-size:22px;margin:10px 0}
+.studio .camera-empty p{font-size:12px;line-height:1.6;color:#bac6b2;margin-bottom:15px}
+.studio .camera-badge{top:12px;left:12px;padding:7px 10px;font-size:11px}
+.studio .settings{top:10px;right:10px}
+.studio .settings summary{padding:8px 10px;font-size:14px}
+.studio .enrollment{left:12px;right:12px;bottom:12px;width:auto;max-width:440px;padding:12px 14px;border-radius:11px;font-size:12px}
+.studio .enrollment strong{font-size:12px}
+.studio .enrollment p{font-size:11px;line-height:1.45;margin:5px 0}
+.studio .enrollment span{font-size:10px}
+.studio>.trainer-actions{grid-column:1;grid-row:4;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding:0 0 12px}
+.trainer-actions p{font-size:11px;color:var(--muted);line-height:1.5;margin:0}
+.trainer-actions>div{display:flex;gap:7px;flex-shrink:0}
+.studio>.studio-bottom{grid-column:2;grid-row:2/6;display:flex;flex-direction:column;align-items:stretch;gap:12px;margin:0;padding:14px;background:#fffefa;border:1px solid var(--line);border-radius:12px;overflow:visible}
+.studio .coach-heading{margin-bottom:12px}
+.studio .move-label{font-size:11px;margin:10px 0 5px}
+.studio .session-summary select{font-size:12px}
+.studio .lesson-title{font-size:21px;margin:16px 0 6px}
+.studio .session-summary p{font-size:12px;line-height:1.6}
+.studio .coach-feedback{padding:11px;margin:12px 0}
+.studio .coach-feedback strong{font-size:12px}
+.studio .lesson-steps{margin:15px 0}
+.studio .lesson-steps strong{font-size:12px}
+.studio .session-summary .lesson-steps p{font-size:11px}
 .studio .extension-count{display:none}
-@media(max-width:700px){.studio-top{align-items:flex-start;gap:12px}.studio-title{font-size:22px}.sport-controls{font-size:11px}.trainer-guide{gap:9px;font-size:10px}.trainer-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.trainer-stats>div{padding:12px}.trainer-stats strong{font-size:28px}.trainer-actions{align-items:flex-start;flex-direction:column}.trainer-actions>div{width:100%}.trainer-actions button{flex:1}.studio .camera-slot{height:350px}.studio .studio-bottom{flex-wrap:wrap;gap:12px}}
+.studio>.message{grid-column:1;grid-row:5;margin:0;font-size:11px}
+@media(max-width:900px){.shell:has(.studio){padding:0 20px}.studio-wrap>.studio{grid-template-columns:minmax(0,1fr) 260px;gap:12px 16px}.trainer-stats small{display:none}.trainer-stats>div{padding:10px}.trainer-guide span{font-size:10px}}
+@media(max-width:700px){.shell:has(.studio){padding:0 14px}.studio-wrap>.studio{grid-template-columns:minmax(0,1fr);grid-template-rows:repeat(7,auto);padding-top:12px}.studio>.studio-top{grid-column:1;grid-row:1}.studio .sport-controls{grid-template-columns:1fr 1fr 1fr}.studio .sport-controls label{display:none}.studio .sport-controls select{grid-column:auto}.studio>.trainer-guide{grid-column:1;grid-row:2;gap:6px 10px}.studio>.trainer-stats{grid-column:1;grid-row:3;gap:6px}.trainer-stats span{font-size:9px}.trainer-stats strong{font-size:22px}.studio>.camera-slot{grid-column:1;grid-row:4;aspect-ratio:4/3}.studio>.trainer-actions{grid-column:1;grid-row:5;flex-wrap:wrap}.studio>.studio-bottom{grid-column:1;grid-row:7}.studio>.message{grid-column:1;grid-row:6}.studio .enrollment{max-width:none}.studio .enrollment p{display:none}.studio .camera-empty h2{font-size:19px}}
