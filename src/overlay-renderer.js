@@ -27,10 +27,11 @@ export class OverlayRenderer {
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
-  render({ poseResult, faceResult, handOverlays, selectedSides }) {
+  render({ poseResult, faceResult, handOverlays, selectedSides, mirrored = true }) {
     const { context, canvas, video } = this;
     context.clearRect(0, 0, canvas.width, canvas.height);
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    this.mirrored = mirrored;
     context.save();
     this.#drawPose(poseResult, selectedSides);
     this.#drawFace(faceResult, poseResult);
@@ -66,10 +67,20 @@ export class OverlayRenderer {
     const top = y - boxHeight - 8;
     context.fillStyle = '#111712dc';
     context.fillRect(x - textWidth / 2 - 6, top, textWidth + 12, boxHeight);
+    this.#readableText(text, x, top + fontSize + 1, color);
+  }
+
+  #readableText(text, x, y, color) {
+    const { context } = this;
+    context.save();
+    if (this.mirrored) {
+      context.translate(x * 2, 0);
+      context.scale(-1, 1);
+    }
     context.fillStyle = color;
     context.textAlign = 'center';
-    context.fillText(text, x, top + fontSize + 1);
-    context.textAlign = 'start';
+    context.fillText(text, x, y);
+    context.restore();
   }
 
   #drawPose(poseResult, selectedSides) {
@@ -174,10 +185,7 @@ export class OverlayRenderer {
     context.strokeStyle = '#111712';
     context.stroke();
     context.font = `500 ${Math.max(9, canvas.width / 100)}px DM Mono,monospace`;
-    context.textAlign = 'center';
-    context.fillStyle = color;
-    context.fillText(name, x + offsetX, y + offsetY);
-    context.textAlign = 'start';
+    this.#readableText(name, x + offsetX, y + offsetY, color);
   }
 
   #drawHand(hand) {

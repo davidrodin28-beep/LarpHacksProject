@@ -29,6 +29,7 @@ const ui = {
   sensitivity: $('sensitivity'),
   sensitivityLabel: $('sensitivityLabel'),
   graph: $('graph'),
+  emoteCount: $('emoteCount'),
   toast: $('toast'),
 };
 
@@ -95,11 +96,13 @@ function updateCalibrationStatus() {
 }
 
 function drawFrame() {
+  const handOverlays = enrollment.visibleHands(results.hands, results.pose);
   renderer.render({
     poseResult: results.pose,
     faceResult: results.face,
-    handOverlays: enrollment.visibleHands(results.hands, results.pose),
+    handOverlays,
     selectedSides: enrollment.selectedSides,
+    mirrored,
   });
 }
 
@@ -228,6 +231,7 @@ function saveSnapshot() {
 
 function resetMetrics() {
   motion.reset();
+  ui.emoteCount.textContent = '0';
   updateMetrics({ level: 0, peak: 0, history: Array(45).fill(0) });
   if (running) sessionStartedAt = Date.now();
   showToast('Session metrics reset');
@@ -271,6 +275,10 @@ ui.lockHands.addEventListener('click', () => {
 ui.sensitivity.addEventListener('input', () => { ui.sensitivityLabel.value = ui.sensitivity.value; });
 ui.snapshotButton.addEventListener('click', saveSnapshot);
 $('resetBtn').addEventListener('click', resetMetrics);
+$('countEmoteBtn').addEventListener('click', () => {
+  ui.emoteCount.textContent = String(Number(ui.emoteCount.textContent) + 1);
+  showToast('6-7 emote counted');
+});
 $('mirrorBtn').addEventListener('click', () => {
   setMirror(!mirrored);
 });

@@ -12,7 +12,7 @@ py -m http.server 8000
 
 Then open [http://localhost:8000](http://localhost:8000) and choose **Start camera**. Allow camera access when your browser asks. On first use, the browser downloads the MediaPipe runtime and pose/hand/face model files; those are used for local processing. Internet access is needed for that first download. Press `Ctrl+C` in the PowerShell window to stop the local server.
 
-You can select a camera, adjust motion sensitivity, pause analysis, mirror the preview, save a snapshot, or reset the session metrics.
+You can select a camera, adjust motion sensitivity, pause analysis, mirror the preview, save a snapshot, manually count 6-7 emotes with the counter button, or reset the session metrics. Overlay words stay readable in the mirrored preview.
 
 ## Code layout
 
