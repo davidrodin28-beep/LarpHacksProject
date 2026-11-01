@@ -32,7 +32,7 @@ services:
         destination: /signup.html
 
   - type: web
-    name: stillwatch-ai
+    name: sportpau
     runtime: python
     plan: free
     rootDir: sportgen

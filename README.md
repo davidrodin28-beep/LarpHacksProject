@@ -99,8 +99,8 @@ cp .env.example .env                      # paste a free build.nvidia.com key in
 
 The page reads the engine URL from `<meta name="sportgen-api">` (empty = `http://localhost:8011`).
 `scripts/build_static.py` fills it from `SPORTGEN_API_URL`; on Render, `render.yaml` adds a second service
-`stillwatch-ai` whose URL you paste into the static site's `SPORTGEN_API_URL`, and the NVIDIA key goes on
-`stillwatch-ai`. "Fast" generations take ~1-3 min, "Best" ~5-8 min; the UI polls `GET /jobs/{id}`.
+`sportpau` (https://sportpau.onrender.com, the production default when the meta tag is empty); the NVIDIA keys
+`SPORTGEN_API_KEY` / `SPORTGEN_FAST_API_KEY` go on that service, never on the static site. "Fast" generations take ~1-3 min, "Best" ~5-8 min; the UI polls `GET /jobs/{id}`.
 
 ## Code layout
 
