@@ -1,3 +1,6 @@
+/* Account pages scroll independently of the fixed-height camera workspace. */
+html:has(.auth-body), .auth-body {height:auto;overflow:auto;}
+.auth-shell {height:auto;overflow:visible;}
 /* Account layouts extend the shared main-branch UI. */
 .auth-shell {
   min-height:100svh;

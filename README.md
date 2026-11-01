@@ -15,11 +15,11 @@ python server.py
 
 On Windows, use `py -m venv .venv` and `.venv\Scripts\Activate.ps1` in PowerShell instead of the first two commands.
 
-Open [http://localhost:8000](http://localhost:8000), create an account, then choose **Start camera**. Use the Flask server, rather than `python -m http.server`: login and signup require the backend. Camera access works on localhost or HTTPS. Allow camera permission when prompted. The browser downloads the MediaPipe models on first use; video processing remains local.
+Open [http://localhost:8000](http://localhost:8000), create an account, then choose **Start**, followed by **Enable camera**. Use the Flask server, rather than `python -m http.server`: login and signup require the backend. Camera access works on localhost or HTTPS. Allow camera permission when prompted. The browser downloads the MediaPipe models on first use; video processing remains local.
 
 ### Accounts and local storage
 
-- `/signup` creates an account and signs in; `/login` signs in; the tracker at `/` requires an account. Log out revokes the current session.
+- `/signup` creates an account and signs in; `/login` signs in; the tracker at `/` requires an account. Your name and **Log out** appear in the main UI header. Log out revokes the current session.
 - SQLite is created automatically at `instance/stillwatch.sqlite3`. Accounts persist across server restarts. Each test uses a separate temporary database.
 - Passwords use Werkzeug scrypt hashing. Session tokens expire after seven days and are stored hashed in SQLite. Cookies are HTTP-only and SameSite=Lax; forms use CSRF tokens. Authentication permits ten attempts per email in a rolling 15-minute window.
 - A local signing secret is generated in `instance/secret.key`. Database files and secrets are ignored by Git. Never serve the repository with a generic public file server.

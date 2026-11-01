@@ -36,7 +36,14 @@ class AccountTests(unittest.TestCase):
         self.assertEqual(self.signup(email=' PERSON@Example.com ').status_code, 303)
         page = self.client.get('/')
         self.assertEqual(page.status_code, 200)
-        self.assertIn(b'Test User', page.data)
+        self.assertIn(b'data-account-name="Test User"', page.data)
+        with self.client.session_transaction() as session:
+            self.assertIn(session['csrf_token'].encode(), page.data)
+        self.assertIn(b'/src/StillwatchUI.js', page.data)
+        self.assertIn(b'/src/styles/app.css', page.data)
+        self.assertNotIn(b'src/app.js', page.data)
+        self.assertEqual(page.data.count(b'<head>'), 1)
+        self.assertEqual(page.data.count(b'<body>'), 1)
         self.assertNotIn(b'{{', page.data)
         self.assertEqual(page.headers['Cache-Control'], 'no-store')
         with closing(sqlite3.connect(self.database)) as db:
